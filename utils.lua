@@ -4,6 +4,7 @@
 module( "otlib", package.seeall )
 
 
+--- Group: String Utilities
 --[[
     Function: Explode
 
@@ -143,11 +144,35 @@ function ParseArgs( args )
     return argv, in_quote
 end
 
+
+--- Group: Table Utilities
+--[[
+    Function: Count
+
+    Counts the number of elements in a table using pairs.
+
+    Parameters:
+
+        t - The *table* to count.
+
+    Returns:
+
+        The *number* of elements in the table.
+        
+    Notes:
+    
+        * This is slow and should be avoided if at all possible.
+
+    Revisions:
+
+        v1.0 - Initial
+]]
 function Count( t )
     local c = 0
     for k, v in pairs( t ) do
         c = c+1
     end
+    
     return c
 end
 
