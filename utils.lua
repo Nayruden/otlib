@@ -1,7 +1,7 @@
 --- File: Utilities
 
 --- Module: otlib
-module( 'otlib', package.seeall )
+module( "otlib", package.seeall )
 
 
 --[[
@@ -141,6 +141,14 @@ function ParseArgs( args )
     end
 
     return argv, in_quote
+end
+
+function Count( t )
+    local c = 0
+    for k, v in pairs( t ) do
+        c = c+1
+    end
+    return c
 end
 
 local function CopyWith( iterator, t )
