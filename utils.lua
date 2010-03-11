@@ -5,71 +5,6 @@ module( 'otlib', package.seeall )
 
 
 --[[
-    Function: ParseArgs
-
-    This is similar to <Explode> with ( str, "%s+" ) except that it will not split up words within
-    quotation marks.
-
-    Parameters:
-
-        args - The input *string* to split from.
-
-    Returns:
-
-        1 - A *table* containing the individual arguments.
-        2 - A *boolean* stating whether or not mismatched quotes were found.
-
-    Example:
-
-        :ParseArgs( "This is a \"Cool sentence to\" make \"split up\"" )
-
-        returns...
-
-        :{ "This", "is", "a", "Cool sentence to", "make", "split up" }
-
-    Notes:
-
-        * Mismatched quotes will result in having the last quote grouping the remaining input into
-            one argument.
-        * Arguments outside of quotes are trimmed (via <Trim>), while what's inside quotes is not
-            trimmed at all.
-
-    Revisions:
-
-        v1.0 - Initial
-]]
-function ParseArgs( args )
-    local argv = {}
-    local curpos = 1 -- Our current position within the string
-    local in_quote = false -- Is the text we're currently processing in a quote?
-    local args_len = args:len()
-
-    while curpos < args_len do
-        local quotepos = args:find( "\"", curpos, true )
-
-        -- The string up to the quote, the whole string if no quote was found
-        local prefix = args:sub( curpos, (quotepos or 0) - 1 )
-        if not in_quote then
-            local t = Explode( Trim( prefix ) )
-            AppendI( argv, t, true )
-        else
-            table.insert( argv, prefix )
-        end
-
-        -- If a quote was found, reduce our position and note our state
-        if quotepos ~= nil then
-            curpos = quotepos + 1
-            in_quote = not in_quote
-        else -- Otherwise we've processed the whole string now
-            break
-        end
-    end
-
-    return argv, in_quote
-end
-
-
---[[
     Function: Explode
 
     Split a string by a string.
@@ -143,11 +78,78 @@ function Trim( str )
     return (str:gsub( "^%s*(.-)%s*$", "%1" ))
 end
 
+
+--[[
+    Function: ParseArgs
+
+    This is similar to <Explode> with ( str, "%s+" ) except that it will not split up words within
+    quotation marks.
+
+    Parameters:
+
+        args - The input *string* to split from.
+
+    Returns:
+
+        1 - A *table* containing the individual arguments.
+        2 - A *boolean* stating whether or not mismatched quotes were found.
+
+    Example:
+
+        :ParseArgs( "This is a \"Cool sentence to\" make \"split up\"" )
+
+        returns...
+
+        :{ "This", "is", "a", "Cool sentence to", "make", "split up" }
+
+    Notes:
+
+        * Mismatched quotes will result in having the last quote grouping the remaining input into
+            one argument.
+        * Arguments outside of quotes are trimmed (via <Trim>), while what's inside quotes is not
+            trimmed at all.
+
+    Revisions:
+
+        v1.0 - Initial
+]]
+function ParseArgs( args )
+    local argv = {}
+    local curpos = 1 -- Our current position within the string
+    local in_quote = false -- Is the text we're currently processing in a quote?
+    local args_len = args:len()
+
+    while curpos < args_len do
+        local quotepos = args:find( "\"", curpos, true )
+
+        -- The string up to the quote, the whole string if no quote was found
+        local prefix = args:sub( curpos, (quotepos or 0) - 1 )
+        if not in_quote then
+            local t = Explode( Trim( prefix ) )
+            AppendI( argv, t, true )
+        else
+            table.insert( argv, prefix )
+        end
+
+        -- If a quote was found, reduce our position and note our state
+        if quotepos ~= nil then
+            curpos = quotepos + 1
+            in_quote = not in_quote
+        else -- Otherwise we've processed the whole string now
+            break
+        end
+    end
+
+    return argv, in_quote
+end
+
 local function CopyWith( iterator, t )
     local c = {}
     for k, v in iterator( t ) do
         c[ k ] = v
     end
+    
+    return c
 end
 
 
@@ -175,7 +177,7 @@ end
 
 
 --[[
-    Function: MergeI
+    Function: CopyI
 
     Exactly the same as <Copy> except that it uses ipairs instead of pairs. In general, this means
     that it only copies numeric keys.
@@ -306,20 +308,3 @@ end
 function AppendI( table_a, table_b, in_place )
     return AppendWith( ipairs, table_a, table_b, in_place )
 end
-
-local function printt( t )
-    print( "---" )
-    for k, v in ipairs( t ) do
-        print( string.format( "%q", v ) )
-    end
-    print( "---" )
-end
-
-printt( ParseArgs( "arg1 arg2 \"this is arg 3\" arg4" ) )
-printt( ParseArgs( "onearg" ) )
-printt( ParseArgs( "onearg twoarg" ) )
-printt( ParseArgs( "hey\" bob person\"" ) )
-printt( ParseArgs( "hey\" bob person space\" " ) )
-printt( ParseArgs( "hey\" arg2 and stuff" ) )
-
-printt( Explode( "howdy \they  mother " ) )
