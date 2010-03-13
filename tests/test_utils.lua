@@ -34,6 +34,11 @@ assert( TableEq( t, { "howdy", "hey", "mother", "" } ) )
 assert( otlib.Trim( " test\t" ) == "test" )
 
 
+-- Test StripComments
+t = otlib.StripComments( "Line 1 # My comment\n#Line with only a comment\nLine 2", "#" )
+assert( t == "Line 1 \n\nLine 2" )
+
+
 -- Test ParseArgs
 t = otlib.ParseArgs( "This is a \"Cool sentence to\" make \"split up\"" )
 assert( TableEq( t, { "This", "is", "a", "Cool sentence to", "make", "split up" } ) )

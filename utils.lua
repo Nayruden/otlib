@@ -76,7 +76,66 @@ end
 ]]
 function Trim( str )
     -- Surrounded in paranthesis to return only the first argument
-    return (str:gsub( "^%s*(.-)%s*$", "%1" ))
+    return (str:match( "^%s*(.-)%s*$" ))
+end
+
+
+--[[
+	Function: Escape
+
+	Makes a string safe for pattern usage, like in string.gsub(). Basically replaces all keywords 
+	with % and the keyword.
+
+	Parameters:
+
+		str - The string to make pattern safe.
+
+	Returns:
+
+		The pattern safe string.
+]]
+function Escape( str )
+    -- Surrounded in paranthesis to return only the first argument
+    return (str:gsub( "([%(%)%.%%%+%-%*%?%[%]%^%$])", "%%%1" ))
+end
+
+
+--[[
+    Function: StripComments
+
+    Strips comments from a string.
+
+    Parameters:
+
+        str - The input *string* to strip from.
+        line_comment - The *string* of the comment to remove from str. Removes whenever it finds
+            this text until the end of the line.
+
+    Returns:
+
+        A *string* of str with the comments removed.
+        
+    Notes:
+    
+        * Only handles line comments, no block comments.
+        * Does not parse the document, so it will remove even from inside quotation marks if it 
+            finds line_comment inside them.
+
+    Example:
+
+        :StripComments( "Line 1 # My comment\n#Line with only a comment\nLine 2", "#" )
+
+        returns...
+
+        :"Line 1 \n\nLine 2"
+
+    Revisions:
+
+        v1.0 - Initial
+]]
+function StripComments( str, line_comment )
+    -- Surrounded in paranthesis to return only the first argument
+    return (str:gsub( Escape( line_comment ) .. "[^\r\n]*", "" ))
 end
 
 
