@@ -35,7 +35,7 @@ module( "otlib", package.seeall )
 
     Revisions:
 
-        v1.0 - Initial
+        v1.00 - Initial
 ]]
 function Explode( str, separator, plain, limit )
     separator = separator or "%s+"
@@ -72,7 +72,7 @@ end
 
     Revisions:
 
-        v1.0 - Initial
+        v1.00 - Initial
 ]]
 function Trim( str )
     -- Surrounded in paranthesis to return only the first argument
@@ -131,7 +131,7 @@ end
 
     Revisions:
 
-        v1.0 - Initial
+        v1.00 - Initial
 ]]
 function StripComments( str, line_comment )
     -- Surrounded in paranthesis to return only the first argument
@@ -171,7 +171,7 @@ end
 
     Revisions:
 
-        v1.0 - Initial
+        v1.00 - Initial
 ]]
 function ParseArgs( args )
     local argv = {}
@@ -205,6 +205,29 @@ end
 
 
 --- Group: Table Utilities
+
+--[[
+    Topic: A Discussion On ipairs
+    
+    ipairs is defined in the lua documentation as... 
+    (Taken from <http://www.lua.org/manual/5.1/manual.html#pdf-ipairs>)
+    :for i,v in ipairs(t) do body end
+    :will iterate over the pairs (1,t[1]), (2,t[2]), ..., up to the first integer key absent from the table.
+    
+    What isn't mentioned is that ipairs is much faster than pairs when you're iterating over a
+    table with only numeric keys. The catch is that it must be sequential numeric keys starting at
+    1. Even with this restriction, it is still very much worthwhile to use ipairs to iterate over
+    the table instead of pairs if you have a table that meets the requirements to use ipairs.
+    
+    Because of all this, OTLib lets you make a choice between using pairs or ipairs on anything
+    that would make sense to have the choice. Any function that has the same name as another
+    function but is just suffixed with the character "I" uses ipairs where the function that is not
+    suffixed uses pairs as its iterator. For example, <Copy> and <CopyI>. One should use <CopyI>
+    instead of <Copy> whenever the table being copied is known to be a list-like table with
+    sequential numeric keys starting at 1.
+]]
+
+
 --[[
     Function: Count
 
@@ -224,7 +247,7 @@ end
 
     Revisions:
 
-        v1.0 - Initial
+        v1.00 - Initial
 ]]
 function Count( t )
     local c = 0
@@ -261,7 +284,7 @@ end
 
     Revisions:
 
-        v1.0 - Initial
+        v1.00 - Initial
 ]]
 function Copy( t )
     return CopyWith( pairs, t )
@@ -272,7 +295,7 @@ end
     Function: CopyI
 
     Exactly the same as <Copy> except that it uses ipairs instead of pairs. In general, this means
-    that it only copies numeric keys.
+    that it only copies numeric keys. See <A Discussion On ipairs>.
 ]]
 function CopyI( t )
     return CopyWith( ipairs, t )
@@ -286,7 +309,7 @@ local function InPlaceHelper( iterator, table_a, in_place )
     end
 end
 
-local function MergeWith( iterator, table_a, table_b, in_place )
+local function UnionWith( iterator, table_a, table_b, in_place )
     table_a = InPlaceHelper( iterator, table_a, in_place )
 
     for k, v in iterator( table_b ) do
@@ -298,48 +321,48 @@ end
 
 
 --[[
-    Function: Merge
+    Function: Union
 
     Merges two tables by key. If both tables have values on the same key, table_b takes precedence.
 
     Parameters:
 
-        table_a - The first *table* in the merge. If in_place is true, table_b is merged to this
+        table_a - The first *table* in the union. If in_place is true, table_b is merged to this
             table.
-        table_b - The second *table* in the merge.
-        in_place - A *boolean* specifying whether or not this should be an in place merge to
+        table_b - The second *table* in the union.
+        in_place - An *optional boolean* specifying whether or not this should be an in place union to
             table_a. Defaults to _false_.
 
     Example:
 
-        :Merge( { apple=red, pear=green, kiwi=hairy },
-        :       { apple=green, pear=green, banana=yellow } )
+        :Union( { apple="red", pear="green", kiwi="hairy" },
+        :       { apple="green", pear="green", banana="yellow" } )
 
         returns...
 
-        :{ apple=green, pear=green, kiwi=hairy, banana=yellow }
+        :{ apple="green", pear="green", kiwi="hairy", banana="yellow" }
 
     Returns:
 
-        The merged *table*. Returns table_a if in_place is true, a new table otherwise.
+        The union *table*. Returns table_a if in_place is true, a new table otherwise.
 
     Revisions:
 
-        v1.0 - Initial
+        v1.00 - Initial
 ]]
-function Merge( table_a, table_b, in_place )
-    return MergeWith( pairs, table_a, table_b, in_place )
+function Union( table_a, table_b, in_place )
+    return UnionWith( pairs, table_a, table_b, in_place )
 end
 
 
 --[[
-    Function: MergeI
+    Function: UnionI
 
-    Exactly the same as <Merge> except that it uses ipairs instead of pairs. In general, this means
-    that it only merges on numeric keys.
+    Exactly the same as <Union> except that it uses ipairs instead of pairs. In general, this means
+    that it only merges on numeric keys. See <A Discussion On ipairs>.
 ]]
-function MergeI( table_a, table_b, in_place )
-    return MergeWith( ipairs, table_a, table_b, in_place )
+function UnionI( table_a, table_b, in_place )
+    return UnionWith( ipairs, table_a, table_b, in_place )
 end
 
 local function AppendWith( iterator, table_a, table_b, in_place )
@@ -355,6 +378,116 @@ local function AppendWith( iterator, table_a, table_b, in_place )
 end
 
 
+local function IntersectionWith( iterator, table_a, table_b, in_place )
+    local result
+    if not in_place then
+        result = {}
+    else
+        result = table_a
+    end
+    
+    -- Now just fill in each value with whatever the value in table_k is. This takes care of both
+    -- elimination and making table b take precedence when both tables have a value on key k.
+    for k, v in iterator( table_a ) do
+        result[ k ] = table_b[ k ]
+    end
+    
+    return result
+end
+
+
+--[[
+    Function: Intersection
+
+    Gets the intersection of two tables by key. If both tables have values on the same key, table_b
+    takes precedence.
+
+    Parameters:
+
+        table_a - The first *table* in the intersection. If in_place is true, table_b is merged to 
+            this table.
+        table_b - The second *table* in the interesection.
+        in_place - An *optional boolean* specifying whether or not this should be an in place intersection to
+            table_a. Defaults to _false_.
+
+    Example:
+
+        :Intersection( { apple="red", pear="green", kiwi="hairy" },
+        :       { apple="green", pear="green", banana="yellow" } )
+
+        returns...
+
+        :{ apple="green", pear="green" }
+
+    Returns:
+
+        The intersection *table*. Returns table_a if in_place is true, a new table otherwise.
+
+    Revisions:
+
+        v1.00 - Initial
+]]
+function Intersection( table_a, table_b, in_place )
+    return IntersectionWith( pairs, table_a, table_b, in_place )
+end
+
+
+--[[
+    Function: IntersectionI
+
+    Exactly the same as <Intersection> except that it uses ipairs instead of pairs. In general, 
+    this means that it only merges on numeric keys. See <A Discussion On ipairs>.
+]]
+function IntersectionI( table_a, table_b, in_place )
+    return IntersectionWith( ipairs, table_a, table_b, in_place )
+end
+
+
+--[[
+    Function: SetFromList
+    
+    Creates a set from a list. A list is defined as a table with all numeric keys in sequential
+    order (such as {"red", "yellow", "green"}). A set is defined as a table that only uses the
+    boolean value true for keys that exist in the table. This function takes the values from the
+    list and makes them the keys in a set, all with the value of 'true'. Note that you lose
+    ordering and duplicates in the list during this conversion, but gain ease of testing for a 
+    value's existence in the table (test whether the value of a key is true or nil).
+    
+    Parameters:
+    
+        list - The *table* representing the list.
+        
+    Returns:
+    
+        The *table* representing the set.
+        
+    Example:
+
+        :SetFromList( { "apple", "banana", "kiwi", "pear" } )
+
+        returns...
+
+        :{ apple=true, banana=true, kiwi=true, pear=true }
+        
+    Notes:
+
+        * This function uses ipairs during the conversion process. See <A Discussion On ipairs>.
+        
+    Revisions:
+
+        v1.00 - Initial
+]]
+function SetFromList( list )
+    local result = {}
+    
+    for i, v in ipairs( list ) do
+        result[ v ] = true
+    end
+    
+    return result
+end
+
+
 --[[
     Function: Append
 
@@ -365,7 +498,7 @@ end
         table_a - The first *table* in the append. If in_place is true, table_b is appended to this
             table. Values in this table will not change.
         table_b - The second *table* in the append.
-        in_place - A *boolean* specifying whether or not this should be an in place append to
+        in_place - An *optional boolean* specifying whether or not this should be an in place append to
             table_a. Defaults to _false_.
 
     Returns:
@@ -381,22 +514,75 @@ end
         returns...
 
         :{ "apple", "banana", "kiwi", "orange", "pear" }
+        
+    Notes:
+
+        * This function uses ipairs. See <A Discussion On ipairs>.
 
     Revisions:
 
-        v1.0 - Initial
+        v1.00 - Initial
 ]]
 function Append( table_a, table_b, in_place )
-    return AppendWith( pairs, table_a, table_b, in_place )
+    local table_a = InPlaceHelper( iterator, table_a, in_place )
+
+    for i, v in ipairs( table_b ) do
+        table.insert( table_a, v )
+    end
+
+    return table_a
+end
+
+local function HasValueWith( iterator, t, value )
+    for k, v in iterator( t ) do
+        if v == value then
+            return true, k
+        end
+    end
+    
+    return false, nil
 end
 
 
 --[[
-    Function: AppendI
+    Function: HasValue
 
-    Exactly the same as <Append> except that it uses ipairs instead of pairs. In general, this
-    means that it only appends on numeric keys.
+    Checks for the presence of a value in a table.
+
+    Parameters:
+
+        t - The *table* to check for the value's presence within.
+        value - *Any type*, the value to check for within t.
+
+    Example:
+
+        :HasValue( { apple="red", pear="green", kiwi="hairy" }, "green" )
+
+        returns...
+
+        :true
+
+    Returns:
+
+        1 - A *boolean*. True if the table has the value, false otherwise.
+        2 - A value of *any type*. The first key the value was found under if it was found, nil 
+            otherwise.
+
+    Revisions:
+
+        v1.00 - Initial
 ]]
-function AppendI( table_a, table_b, in_place )
-    return AppendWith( ipairs, table_a, table_b, in_place )
+function HasValue( t, value )
+    return HasValueWith( pairs, t, value )
+end
+
+
+--[[
+    Function: HasValueI
+
+    Exactly the same as <HasValue> except that it uses ipairs instead of pairs. In general, 
+    this means that it only merges on numeric keys. See <A Discussion On ipairs>.
+]]
+function HasValueI( t, value )
+    return HasValueWith( ipairs, t, value )
 end

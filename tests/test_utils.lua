@@ -68,10 +68,16 @@ assert( TableEq( t, otlib.Copy( t ) ) )
 assert( TableEq( t, otlib.CopyI( t ) ) )
 
 -- Test Merge
-t, u = { apple=red, pear=green, kiwi=hairy }, { apple=green, pear=green, banana=yellow }
-assert( TableEq( otlib.Merge( t, u ), { apple=green, pear=green, kiwi=hairy, banana=yellow } ) )
-assert( TableEq( otlib.MergeI( t, u ), {} ) )
-assert( TableEq( otlib.Merge( t, u, true ), { apple=green, pear=green, kiwi=hairy, banana=yellow } ) )
+t, u = { apple="red", pear="green", kiwi="hairy" }, { apple="green", pear="green", banana="yellow",}
+assert( TableEq( otlib.Union( t, u ), { apple="green", pear="green", kiwi="hairy", banana="yellow" } ) )
+assert( TableEq( otlib.UnionI( t, u ), {} ) )
+assert( TableEq( otlib.Union( t, u, true ), { apple="green", pear="green", kiwi="hairy", banana="yellow" } ) )
+
+-- Test Intersection
+t, u = { apple="red", pear="green", kiwi="hairy" }, { apple="green", pear="green", banana="yellow" }
+assert( TableEq( otlib.Intersection( t, u ), { apple="green", pear="green" } ) )
+assert( TableEq( otlib.IntersectionI( t, u ), {} ) )
+assert( TableEq( otlib.Intersection( t, u, true ), { apple="green", pear="green" } ) )
 
 -- Test Append
 t, u = { "apple", "banana", "kiwi" }, { "orange", "pear" }

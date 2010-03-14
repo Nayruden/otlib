@@ -23,4 +23,5 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 Topic: Code Conventions
     * Whenever a function name is suffixed by "I", it uses ipairs (instead of pairs) to function.
     This is because ipairs is much faster and should be used instead of pairs whenever it can be.
+    For a more on this, see <A Discussion On ipairs>.
     
