@@ -82,4 +82,21 @@ assert( TableEq( otlib.Intersection( t, u, true ), { apple="green", pear="green"
 -- Test Append
 t, u = { "apple", "banana", "kiwi" }, { "orange", "pear" }
 assert( TableEq( otlib.Append( t, u ), { "apple", "banana", "kiwi", "orange", "pear" } ) )
-assert( TableEq( otlib.AppendI( t, u ), { "apple", "banana", "kiwi", "orange", "pear" } ) )
+
+-- Test ToBool
+assert( otlib.ToBool( false ) == false )
+assert( otlib.ToBool( true ) == true )
+assert( otlib.ToBool( 0 ) == false )
+assert( otlib.ToBool( "0.0" ) == false )
+assert( otlib.ToBool( -1 ) == true )
+assert( otlib.ToBool( "-1.0" ) == true )
+assert( otlib.ToBool( nil ) == false )
+assert( otlib.ToBool( "yes" ) == true )
+assert( otlib.ToBool( "y" ) == true )
+assert( otlib.ToBool( "t" ) == true )
+assert( otlib.ToBool( "true" ) == true )
+assert( otlib.ToBool( "n" ) == false )
+assert( otlib.ToBool( "no" ) == false )
+assert( otlib.ToBool( "false" ) == false )
+assert( otlib.ToBool( "f" ) == false )
+assert( otlib.ToBool( function() end ) == true ) -- Favor true

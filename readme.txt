@@ -2,7 +2,7 @@ Title: OTLib Readme
 
 Version 1.0 
 
-Copyright (c) 2010 Team Omnicreep
+Copyright (c) 2010 Team Omnivore
 
 http://somesite.org
 

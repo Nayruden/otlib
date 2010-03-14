@@ -81,18 +81,18 @@ end
 
 
 --[[
-	Function: Escape
+    Function: Escape
 
-	Makes a string safe for pattern usage, like in string.gsub(). Basically replaces all keywords 
-	with % and the keyword.
+    Makes a string safe for pattern usage, like in string.gsub(). Basically replaces all keywords 
+    with % and the keyword.
 
-	Parameters:
+    Parameters:
 
-		str - The string to make pattern safe.
+        str - The string to make pattern safe.
 
-	Returns:
+    Returns:
 
-		The pattern safe string.
+        The pattern safe string.
 ]]
 function Escape( str )
     -- Surrounded in paranthesis to return only the first argument
@@ -186,7 +186,7 @@ function ParseArgs( args )
         local prefix = args:sub( curpos, (quotepos or 0) - 1 )
         if not in_quote then
             local t = Explode( Trim( prefix ) )
-            AppendI( argv, t, true )
+            Append( argv, t, true )
         else
             table.insert( argv, prefix )
         end
@@ -524,7 +524,7 @@ end
         v1.00 - Initial
 ]]
 function Append( table_a, table_b, in_place )
-    local table_a = InPlaceHelper( iterator, table_a, in_place )
+    local table_a = InPlaceHelper( ipairs, table_a, in_place )
 
     for i, v in ipairs( table_b ) do
         table.insert( table_a, v )
@@ -585,4 +585,52 @@ end
 ]]
 function HasValueI( t, value )
     return HasValueWith( ipairs, t, value )
+end
+
+
+--- Group: Other Utilities
+--[[
+    Function: ToBool
+
+    Converts a boolean, nil, string, or number to a boolean value.
+
+    Parameters:
+
+        value - The *boolean, nil, string, or number* to convert.
+
+    Returns:
+
+        The converted *boolean* value.
+        
+    Notes:
+    
+        * This function favors returning true if it's not quite sure what to do.
+        * 0, strings equating to 0, nil, false, "f", "false", "no", and "n" will all return false.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
+function ToBool( value )
+    if type( value ) == "boolean" then 
+        return value
+    elseif value == nil then 
+        return false
+    elseif tonumber( value ) ~= nil then
+        if tonumber( value ) == 0 then
+            return false
+        else
+            return true
+        end
+    elseif type( value ) == "string" then
+        value = value:lower()
+        if value == "f" or value == "false" or value == "no" or value == "n" then
+            return false
+        else
+            return true
+        end
+    end
+    
+    -- Shouldn't get here with the constraints on type, but just in case...
+    return true
 end
