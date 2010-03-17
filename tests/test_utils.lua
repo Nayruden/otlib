@@ -1,4 +1,5 @@
 dofile( "../utils.lua" )
+dofile( "../debug.lua" )
 
 local function TableEq( t1, t2 )
     local c1 = 0
@@ -53,10 +54,25 @@ t = otlib.ParseArgs( "hey\" bob person\"" )
 assert( TableEq( t, { "hey", " bob person" } ) )
 
 t = otlib.ParseArgs( "hey\" bob person space\" " )
-assert( TableEq( t, { "hey", " bob person space" } ) )
+assert( TableEq( t, { "hey", " bob person space", "" } ) )
 
 t = otlib.ParseArgs( "hey\" arg2 and stuff" )
 assert( TableEq( t, { "hey", " arg2 and stuff" } ) )
+
+t = otlib.ParseArgs( "{" )
+assert( TableEq( t, { "{" } ) )
+
+t = otlib.ParseArgs( "\"arg1\" \"arg2\"" )
+assert( TableEq( t, { "arg1", "arg2" } ) )
+
+t = otlib.ParseArgs( "  \"arg1\" " )
+assert( TableEq( t, { "arg1" } ) )
+
+t = otlib.ParseArgs( "\"arg1\"" )
+assert( TableEq( t, { "arg1" } ) )
+
+t = otlib.ParseArgs( "arg1\"" )
+assert( TableEq( t, { "arg1", "" } ) )
 
 -- Test Copy
 t = { [1]="hey", blah=67, mango="one" }
@@ -78,6 +94,12 @@ t, u = { apple="red", pear="green", kiwi="hairy" }, { apple="green", pear="green
 assert( TableEq( otlib.Intersection( t, u ), { apple="green", pear="green" } ) )
 assert( TableEq( otlib.IntersectionI( t, u ), {} ) )
 assert( TableEq( otlib.Intersection( t, u, true ), { apple="green", pear="green" } ) )
+
+-- Test Difference
+t, u = { apple="red", pear="green", kiwi="hairy" }, { apple="green", pear="green", banana="yellow" }
+assert( TableEq( otlib.Difference( t, u ), { kiwi="hairy" } ) )
+assert( TableEq( otlib.DifferenceI( t, u ), {} ) )
+assert( TableEq( otlib.Difference( t, u, true ), { kiwi="hairy" } ) )
 
 -- Test Append
 t, u = { "apple", "banana", "kiwi" }, { "orange", "pear" }

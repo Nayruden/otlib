@@ -179,14 +179,17 @@ function ParseArgs( args )
     local in_quote = false -- Is the text we're currently processing in a quote?
     local args_len = args:len()
 
-    while curpos < args_len do
+    while curpos <= args_len or in_quote do
         local quotepos = args:find( "\"", curpos, true )
 
         -- The string up to the quote, the whole string if no quote was found
         local prefix = args:sub( curpos, (quotepos or 0) - 1 )
         if not in_quote then
-            local t = Explode( Trim( prefix ) )
-            Append( argv, t, true )
+            local trimmed = Trim( prefix )
+            if trimmed ~= "" then -- Something to be had from this...
+                local t = Explode( Trim( prefix ) )
+                Append( argv, t, true )
+            end
         else
             table.insert( argv, prefix )
         end
@@ -365,19 +368,6 @@ function UnionI( table_a, table_b, in_place )
     return UnionWith( ipairs, table_a, table_b, in_place )
 end
 
-local function AppendWith( iterator, table_a, table_b, in_place )
-    local table_a = InPlaceHelper( iterator, table_a, in_place )
-
-    for k, v in iterator( table_b ) do
-        if type( k ) == "number" then
-            table.insert( table_a, v )
-        end
-    end
-
-    return table_a
-end
-
-
 local function IntersectionWith( iterator, table_a, table_b, in_place )
     local result
     if not in_place then
@@ -440,6 +430,80 @@ end
 ]]
 function IntersectionI( table_a, table_b, in_place )
     return IntersectionWith( ipairs, table_a, table_b, in_place )
+end
+
+local function DifferenceWith( iterator, table_a, table_b, in_place )
+    table_a = InPlaceHelper( iterator, table_a, in_place )
+    
+    for k, v in iterator( table_b ) do
+        table_a[ k ] = nil
+    end
+    
+    return table_a
+end
+
+
+--[[
+    Function: Difference
+
+    Gets the difference of two tables by key. Difference is defined as all the keys in table A that
+    are not in table B.
+
+    Parameters:
+
+        table_a - The first *table* in the difference. If in_place is true, keys from table_b are
+            removed from this table.
+        table_b - The second *table* in the difference.
+        in_place - An *optional boolean* specifying whether or not this should be an in place 
+            difference operation on table_a. Defaults to _false_.
+
+    Example:
+
+        :Difference( { apple="red", pear="green", kiwi="hairy" },
+        :            { apple="green", pear="green", banana="yellow" } )
+
+        returns...
+
+        :{ kiwi="hairy" }
+
+    Returns:
+
+        The difference *table*. Returns table_a if in_place is true, a new table otherwise.
+
+    Revisions:
+
+        v1.00 - Initial
+]]
+function Difference( table_a, table_b, in_place )
+    return DifferenceWith( pairs, table_a, table_b, in_place )
+end
+
+
+--[[
+    Function: DifferenceI
+
+    Exactly the same as <Difference> except that it uses ipairs instead of pairs. In general, this means
+    that it only performs the difference on numeric keys. See <A Discussion On ipairs>.
+]]
+function DifferenceI( table_a, table_b, in_place )
+    return DifferenceWith( ipairs, table_a, table_b, in_place )
+end
+
+local function IntersectionWith( iterator, table_a, table_b, in_place )
+    local result
+    if not in_place then
+        result = {}
+    else
+        result = table_a
+    end
+    
+    -- Now just fill in each value with whatever the value in table_k is. This takes care of both
+    -- elimination and making table b take precedence when both tables have a value on key k.
+    for k, v in iterator( table_a ) do
+        result[ k ] = table_b[ k ]
+    end
+    
+    return result
 end
 
 
