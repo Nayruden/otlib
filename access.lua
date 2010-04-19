@@ -5,24 +5,25 @@ module( "otlib", package.seeall )
 
 --- Group: Access Registration
 
-local tag_to_access = {}
 local registered_tags = {}
 
 access = object:Clone()
 
 function access:Register( tag, ... )
     local new = self:Clone()
-    tag_to_access[ tag ] = new
     if not registered_tags[ tag ] then
         for i, group in ipairs( { ... } ) do
             group.allow[ new ] = true
         end
     end
     
+    -- TODO: Persist registered_tags
+    
     return new
 end
 
-function access:AddParam( details )
+function access:AddParam( param )
+    -- TODO
 end
 
 --- Group: Group Access
@@ -31,7 +32,7 @@ local groups = {}
 
 user = object:Clone()
 user.allow = object:Clone()
-groups.user = user -- Register root by hand
+groups.user = user -- Register root group by hand
 
 function user:RegisterClonedGroup( name )
 	local new = self:Clone()
@@ -41,14 +42,12 @@ function user:RegisterClonedGroup( name )
     return new
 end
 
-admin = user:RegisterClonedGroup( "admin" )
+operator = user:RegisterClonedGroup( "operator" )
+admin = operator:RegisterClonedGroup( "admin" )
 superadmin = admin:RegisterClonedGroup( "superadmin" )
 
 slap = access:Register( "slap", admin )
-slap:AddParam{ type=NumberType, optional, min=0, max=100, default=0 }
--- access_obj = otlib.RegisterAccess( access_tag, group1, group2, ... )
--- access_obj:AddParam{ type=otlib.PlayersType, otlib.optional, default=otlib.target.self }
--- access_obj:AddParam{ type=otlib.NumberType, otlib.optional, min=-10, max=10, default=0 }
+-- slap:AddParam{ NumberType():Optional( true ):Min( 0 ):Max( 100 ):Default( 0 ) }
 
 --- Group: User Access
 
@@ -65,6 +64,7 @@ function user:RegisterUser( ... )
 end
 
 function user:CheckAccess( access, ... )
+    -- TODO: Handle params
     if self.allow[ access ] then
         return true
     end
@@ -72,6 +72,10 @@ function user:CheckAccess( access, ... )
     return false
 end
 
+function UserFromID( id )
+    return alias_to_user[ id ]
+end
+
 function CheckAccess( id, access, ... )
-    return alias_to_user[ id ]:CheckAccess( access, ... )
+    return UserFromID( id ):CheckAccess( access, ... )
 end
