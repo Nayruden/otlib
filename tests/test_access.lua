@@ -1,7 +1,3 @@
-dofile( "../prototype.lua" )
-dofile( "../utils.lua" )
-dofile( "../access.lua" )
-
 user1 = otlib.admin:RegisterUser( "123" )
 
 user2 = otlib.operator:RegisterUser( "321" )

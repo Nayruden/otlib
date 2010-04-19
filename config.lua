@@ -3,6 +3,8 @@
 --- Module: otlib
 module( "otlib", package.seeall )
 
+-- TODO, remove this file and move these somewhere else
+
 --[[
     Variables: Targets
     

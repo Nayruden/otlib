@@ -1,6 +1,3 @@
-dofile( "../utils.lua" )
-dofile( "../debug.lua" )
-
 local function TableEq( t1, t2 )
     local c1 = 0
     for k, v in pairs( t1 ) do
