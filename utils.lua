@@ -32,10 +32,14 @@ module( "otlib", package.seeall )
         returns...
 
         :{ "p1", "p2", "p3" }
+        
+    Notes:
+    
+        * If separator is the empty string (""), this function loops infinitely.
 
     Revisions:
 
-        v1.00 - Initial
+        v1.00 - Initial.
 ]]
 function Explode( str, separator, plain, limit )
     separator = separator or "%s+"
@@ -69,14 +73,17 @@ end
     Returns:
 
         The stripped *string*.
+        
+    Notes:
+    
+        * This is 'trim6' from <http://lua-users.org/wiki/StringTrim>.
 
     Revisions:
 
-        v1.00 - Initial
+        v1.00 - Initial.
 ]]
 function Trim( str )
-    -- Surrounded in paranthesis to return only the first argument
-    return (str:match( "^%s*(.-)%s*$" ))
+    return str:match'^()%s*$' and '' or str:match'^%s*(.*%S)'
 end
 
 
@@ -131,7 +138,7 @@ end
 
     Revisions:
 
-        v1.00 - Initial
+        v1.00 - Initial.
 ]]
 function StripComments( str, line_comment )
     -- Surrounded in paranthesis to return only the first argument
@@ -171,7 +178,7 @@ end
 
     Revisions:
 
-        v1.00 - Initial
+        v1.00 - Initial.
 ]]
 function ParseArgs( args )
     local argv = {}
@@ -204,6 +211,43 @@ function ParseArgs( args )
     end
 
     return argv, in_quote
+end
+
+
+--- Group: Numeric Utilities
+
+--[[
+    Function: Round
+
+    Rounds a number to a given decimal place.
+
+    Parameters:
+
+        num - The *number* to round.
+        places - The *optional number* of places to round to. 0 rounds to the nearest whole number,
+            1 rounds to the nearest tenth, 2 rounds to the nearest thousandth, etc. Negative 
+            numbers round into the non-fractional places; -1 rounds to the nearest tens, -2 rounds 
+            to the nearest hundreds, etc. Defaults to _0_.
+
+    Returns:
+
+        The rounded *number*.
+        
+    Notes:
+    
+        * This is adapted from the ideas at <http://lua-users.org/wiki/SimpleRound>.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
+function Round( num, places )
+    if places and places ~= 0 then
+        local mult = 10 ^ places
+        return math.floor( num * mult + 0.5 ) / mult
+    else
+        return math.floor( num + 0.5 )
+    end
 end
 
 
@@ -250,7 +294,7 @@ end
 
     Revisions:
 
-        v1.00 - Initial
+        v1.00 - Initial.
 ]]
 function Count( t )
     local c = 0
@@ -287,7 +331,7 @@ end
 
     Revisions:
 
-        v1.00 - Initial
+        v1.00 - Initial.
 ]]
 function Copy( t )
     return CopyWith( pairs, t )
@@ -351,7 +395,7 @@ end
 
     Revisions:
 
-        v1.00 - Initial
+        v1.00 - Initial.
 ]]
 function Union( table_a, table_b, in_place )
     return UnionWith( pairs, table_a, table_b, in_place )
@@ -415,7 +459,7 @@ end
 
     Revisions:
 
-        v1.00 - Initial
+        v1.00 - Initial.
 ]]
 function Intersection( table_a, table_b, in_place )
     return IntersectionWith( pairs, table_a, table_b, in_place )
@@ -472,7 +516,7 @@ end
 
     Revisions:
 
-        v1.00 - Initial
+        v1.00 - Initial.
 ]]
 function Difference( table_a, table_b, in_place )
     return DifferenceWith( pairs, table_a, table_b, in_place )
@@ -539,7 +583,7 @@ end
         
     Revisions:
 
-        v1.00 - Initial
+        v1.00 - Initial.
 ]]
 function SetFromList( list )
     local result = {}
@@ -585,7 +629,7 @@ end
 
     Revisions:
 
-        v1.00 - Initial
+        v1.00 - Initial.
 ]]
 function Append( table_a, table_b, in_place )
     local table_a = InPlaceHelper( ipairs, table_a, in_place )
@@ -617,6 +661,12 @@ end
 
         t - The *table* to check for the value's presence within.
         value - *Any type*, the value to check for within t.
+        
+    Returns:
+
+        1 - A *boolean*. True if the table has the value, false otherwise.
+        2 - A value of *any type*. The first key the value was found under if it was found, nil 
+            otherwise.
 
     Example:
 
@@ -624,17 +674,11 @@ end
 
         returns...
 
-        :true
-
-    Returns:
-
-        1 - A *boolean*. True if the table has the value, false otherwise.
-        2 - A value of *any type*. The first key the value was found under if it was found, nil 
-            otherwise.
+        :true, "pear"
 
     Revisions:
 
-        v1.00 - Initial
+        v1.00 - Initial.
 ]]
 function HasValue( t, value )
     return HasValueWith( pairs, t, value )
@@ -653,6 +697,8 @@ end
 
 
 --- Group: Other Utilities
+--- Things that don't fit in any other category.
+
 --[[
     Function: ToBool
 
@@ -673,7 +719,7 @@ end
 
     Revisions:
 
-        v1.00 - Initial.
+        v1.00 - Initial..
 ]]
 function ToBool( value )
     if type( value ) == "boolean" then 
@@ -697,4 +743,49 @@ function ToBool( value )
     
     -- Shouldn't get here with the constraints on type, but just in case...
     return true
+end
+
+local function call(self, ...)
+    self.__index = {n = select('#', ...), ...}
+    return ...
+end
+
+
+--[[
+    Function: StoredExpression
+
+    Creates an object that will store an expression.
+
+    Returns:
+
+        A *table* that can be called and accepts any number of arguments, then stores and returns 
+            the arguments as given. You can access the arguments in the table by index, or retrieve
+            the total number of aruments from field 'n'.
+        
+    Example:
+
+        :ex = StoredExpression()
+        :my_list = { "milk", "bread", "cookies", "eggs" }
+        :if ex( HasValue( my_list, "cookies" ) ) then
+        :   print( "cookies are item #" .. ex[ 2 ] .. " on my list" )
+        :end
+        :print( "there were " .. ex.n .. " variables passed back from HasValue" )
+
+        prints...
+
+        :cookies are item #3 on my list
+        :there were 2 variables passed back from HasValue
+        
+    Notes:
+    
+        * This comes from <http://lua-users.org/wiki/StatementsInExpressions>. See this URL for a
+            more detailed discussion on stored expressions.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
+function StoredExpression()
+    local self = {__call = call}
+    return setmetatable(self, self)
 end

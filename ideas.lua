@@ -33,6 +33,11 @@ access_obj = otlib.RegisterAccess( access_tag, group1, group2, ... )
 access_obj:AddParam{ type=otlib.PlayersType, otlib.optional, default=otlib.target.self }
 access_obj:AddParam{ type=otlib.NumberType, otlib.optional, min=-10, max=10, default=0 }
 
+local not_self = PlayersArg( "!^" )
+
+access_obj = otlib.RegisterAccess( access_tag, group1, group2, ... )
+access_obj:AddParam( Copy( not_self ):Max( 10 ) )
+
 
 --[[
 Ze list:

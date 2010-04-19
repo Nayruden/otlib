@@ -33,11 +33,20 @@ assert( TableEq( t, { "howdy", "hey", "mother", "" } ) )
 
 -- Test Trim
 assert( otlib.Trim( " test\t" ) == "test" )
+assert( otlib.Trim( "abcd" ) == "abcd" )
+assert( otlib.Trim( "" ) == "" )
 
 
 -- Test StripComments
 t = otlib.StripComments( "Line 1 # My comment\n#Line with only a comment\nLine 2", "#" )
 assert( t == "Line 1 \n\nLine 2" )
+
+
+-- Test Round
+assert( 41 == otlib.Round( 41.41 ) )
+assert( 42 == otlib.Round( 41.50, 0 ) )
+assert( 410 == otlib.Round( 414, -1 ) )
+assert( 41.41 == otlib.Round( 41.4099, 2 ) )
 
 
 -- Test ParseArgs
@@ -104,6 +113,13 @@ assert( TableEq( otlib.Difference( t, u, true ), { kiwi="hairy" } ) )
 -- Test Append
 t, u = { "apple", "banana", "kiwi" }, { "orange", "pear" }
 assert( TableEq( otlib.Append( t, u ), { "apple", "banana", "kiwi", "orange", "pear" } ) )
+
+-- Test HasValue
+t = { apple="red", pear="green", kiwi="hairy" }
+a, b = otlib.HasValue( t, "green" )
+assert( a == true and b == "pear" )
+a, b = otlib.HasValue( t, "blue" )
+assert( a == false and b == nil )
 
 -- Test ToBool
 assert( otlib.ToBool( false ) == false )

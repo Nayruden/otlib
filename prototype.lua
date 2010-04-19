@@ -23,7 +23,7 @@ module( "otlib", package.seeall )
         
     Revisions:
 
-        v1.00 - Initial
+        v1.00 - Initial.
 ]]
 function Clone( base, clone )
     clone = clone or {}
@@ -48,7 +48,7 @@ end
         
     Revisions:
 
-        v1.00 - Initial
+        v1.00 - Initial.
 ]]
 function Parent( clone )
     local mt = getmetatable( clone )
@@ -77,7 +77,7 @@ end
         
     Revisions:
 
-        v1.00 - Initial
+        v1.00 - Initial.
 ]]
 function IsA( clone, base )
     if clone == base then 
@@ -100,7 +100,7 @@ end
 --[[
     Object: otlib.object
     
-    Merely serves as a convenient wrapper for the <otlib.Clone> and <otlib.IsA> functions.
+    Merely serves as a convenient wrapper and root prototype.
 ]]
 object = Clone( table, { Clone = Clone, IsA = IsA, Parent=Parent } )
 --[[

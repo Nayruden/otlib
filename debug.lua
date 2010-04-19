@@ -65,7 +65,7 @@ end
 
     Revisions:
 
-        v1.00 - Initial
+        v1.00 - Initial.
 ]]
 function Vardump( ... )
     local t = { ... }
