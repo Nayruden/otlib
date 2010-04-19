@@ -291,6 +291,9 @@ end
     Notes:
     
         * This is slow and should be avoided if at all possible.
+        * Use the '#' operator instead of this if the table only contains numeric indices or if you
+        you only care about the numeric indices.
+        * Use <IsEmpty> instead of this if you want to see if a hash table has any values.
 
     Revisions:
 
@@ -303,6 +306,33 @@ function Count( t )
     end
     
     return c
+end
+
+
+--[[
+    Function: IsEmpty
+    
+    Checks if a table contains any values on any type of key.
+    
+    Parameters:
+        
+        t - The *table* to check.
+        
+    Returns:
+    
+        A *boolean*, true if t has one or more values, false otherwise.
+        
+    Notes:
+        
+        * This is much faster than <Count> for checking if a table has any elements, but you should
+        still use the '#' operator instead of this if you only care about numeric indices.
+        
+    Revisions:
+
+        v1.00 - Initial.
+]]
+function IsEmpty( t )
+    return next( t ) == nil
 end
 
 local function CopyWith( iterator, t )

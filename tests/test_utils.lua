@@ -83,6 +83,16 @@ assert( TableEq( t, { "arg1" } ) )
 t = otlib.ParseArgs( "arg1\"" )
 assert( TableEq( t, { "arg1", "" } ) )
 
+-- Test Count
+t = { 1, 3, "two", [{}]=4 }
+assert( otlib.Count( t ) == 4 )
+assert( otlib.Count( {} ) == 0 )
+
+-- Test IsEmpty
+assert( otlib.IsEmpty( {} ) == true )
+assert( otlib.IsEmpty( { "one" } ) == false )
+assert( otlib.IsEmpty( { [{}]="apple" } ) == false )
+
 -- Test Copy
 t = { [1]="hey", blah=67, mango="one" }
 assert( TableEq( t, otlib.Copy( t ) ) )
