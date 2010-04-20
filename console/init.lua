@@ -1,8 +1,8 @@
 --- File: Initialization
 --- Initialization of OTLib console mod occurs here
 
---- Module: otlib.console
-module( "otlib.console", package.seeall )
+--- Module: otlib
+module( "otlib", package.seeall )
 
 -- TODO, more automated
 dofile "init.lua"
@@ -10,6 +10,7 @@ dofile "utils.lua"
 dofile "prototype.lua"
 dofile "access.lua"
 dofile "debug.lua"
+dofile "parameters.lua"
 
 function DoTests()
     local tests = { "utils", "access" }

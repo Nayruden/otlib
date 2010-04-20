@@ -11,19 +11,22 @@ access = object:Clone()
 
 function access:Register( tag, ... )
     local new = self:Clone()
-    if not registered_tags[ tag ] then
+    new.params = {}
+    
+    --if not registered_tags[ tag ] then
         for i, group in ipairs( { ... } ) do
             group.allow[ new ] = true
         end
-    end
+    --end
     
+    registered_tags[ tag ] = true
     -- TODO: Persist registered_tags
     
     return new
 end
 
 function access:AddParam( param )
-    -- TODO
+    table.insert( self.params, param )
 end
 
 --- Group: Group Access
@@ -42,13 +45,6 @@ function user:RegisterClonedGroup( name )
     return new
 end
 
-operator = user:RegisterClonedGroup( "operator" )
-admin = operator:RegisterClonedGroup( "admin" )
-superadmin = admin:RegisterClonedGroup( "superadmin" )
-
-slap = access:Register( "slap", admin )
--- slap:AddParam{ NumberType():Optional( true ):Min( 0 ):Max( 100 ):Default( 0 ) }
-
 --- Group: User Access
 
 local alias_to_user = {}
@@ -64,12 +60,19 @@ function user:RegisterUser( ... )
 end
 
 function user:CheckAccess( access, ... )
-    -- TODO: Handle params
-    if self.allow[ access ] then
-        return true
+    if not self.allow[ access ] then
+        return false, "access denied"
     end
     
-    return false
+    local args = { ... }
+    local ex = StoredExpression()
+    for i, v in ipairs( access.params ) do
+        if not ex( v:IsValid( self, args[ i ] ) ) then
+            return false, ex[ 2 ]
+        end
+    end
+    
+    return true
 end
 
 function UserFromID( id )

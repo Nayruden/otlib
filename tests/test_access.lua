@@ -1,6 +1,16 @@
-user1 = otlib.admin:RegisterUser( "123" )
+operator    = otlib.user:RegisterClonedGroup( "operator" )
+admin       = operator:RegisterClonedGroup( "admin" )
+superadmin  = admin:RegisterClonedGroup( "superadmin" )
 
-user2 = otlib.operator:RegisterUser( "321" )
+slap = otlib.access:Register( "slap", otlib.admin )
+slap:AddParam( otlib.NumParam():Optional( true ):Min( 0 ):Max( 100 ) )
 
-print( otlib.CheckAccess( "123", otlib.slap, 6 ) )
-print( otlib.CheckAccess( "321", otlib.slap, 6 ) )
+user1 = admin:RegisterUser( "123" )
+
+user2 = operator:RegisterUser( "321" )
+
+print( otlib.CheckAccess( "123", slap, 6 ) )
+print( otlib.CheckAccess( "321", slap, 6 ) )
+
+print( otlib.CheckAccess( "123", slap, -6 ) )
+print( otlib.CheckAccess( "321", slap, 6 ) )

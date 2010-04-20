@@ -29,7 +29,8 @@ function Clone( base, clone )
     clone = clone or {}
 	local mt = getmetatable( clone ) or {}
     mt.__index = base
-    return setmetatable( clone, mt )
+    setmetatable( clone, mt )
+    return clone
 end
 
 

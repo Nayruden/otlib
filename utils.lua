@@ -775,8 +775,8 @@ function ToBool( value )
     return true
 end
 
-local function call(self, ...)
-    self.__index = {n = select('#', ...), ...}
+local function call( self, ... )
+    self.__index = { n = select( "#", ... ), ... }
     return ...
 end
 
@@ -816,6 +816,6 @@ end
         v1.00 - Initial.
 ]]
 function StoredExpression()
-    local self = {__call = call}
-    return setmetatable(self, self)
+    local self = { __call = call }
+    return setmetatable( self, self )
 end
