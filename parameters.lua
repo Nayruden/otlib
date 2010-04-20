@@ -11,7 +11,9 @@ NumParam.default = 0
 
 local meta = getmetatable( NumParam )
 function meta:__call()
-    return self:Clone()
+    local new = self:Clone()
+    getmetatable( new ).__call = meta.__call
+    return new
 end
 
 function NumParam:Autocomplete( user, cmd, arg )

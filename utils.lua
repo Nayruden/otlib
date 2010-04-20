@@ -749,7 +749,7 @@ end
 
     Revisions:
 
-        v1.00 - Initial..
+        v1.00 - Initial.
 ]]
 function ToBool( value )
     if type( value ) == "boolean" then 

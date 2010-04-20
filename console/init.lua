@@ -1,4 +1,4 @@
---- File: Initialization
+--- File: Console Mod Initialization
 --- Initialization of OTLib console mod occurs here
 
 --- Module: otlib
