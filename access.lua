@@ -77,11 +77,19 @@ end
 local groups = {}
 
 --[[
+    Function: GetGroup
+]]
+function GetGroup( group )
+    return groups[ group ]
+end
+
+--[[
     Object: otlib.group
 ]]
 group = object:Clone()
 group.allow = object:Clone()
 groups.user = group -- Register root group by hand
+user = group -- User group is root group
 
 function group:RegisterClonedGroup( name )
 	local new = self:Clone()

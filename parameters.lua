@@ -3,18 +3,11 @@
 --- Module: otlib
 module( "otlib", package.seeall )
 
-NumParam = object:Clone()
+NumParam = object:Clone( true )
 NumParam.optional = false
 NumParam.min = -math.huge
 NumParam.max = math.huge
 NumParam.default = 0
-
-local meta = getmetatable( NumParam )
-function meta:__call()
-    local new = self:Clone()
-    getmetatable( new ).__call = meta.__call
-    return new
-end
 
 function NumParam:Autocomplete( user, cmd, arg )
     error( ErrorMessages.NotImplemented, 2 )

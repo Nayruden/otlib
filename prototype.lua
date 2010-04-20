@@ -5,6 +5,14 @@
 --- Module: otlib
 module( "otlib", package.seeall )
 
+local function __call( self, ... )
+    local new = self:Clone( true )
+    if new.Init then
+        new:Init( ... )
+    end
+    return new
+end
+
 
 --[[
     Function: Clone
@@ -14,6 +22,9 @@ module( "otlib", package.seeall )
     Parameters:
     
         base - The *table* to clone from.
+        callable - An *optional boolean*. If true, __call is set on the clone and returns another
+            clone. If the function Init is defined, it will be called with whatever parameters are
+            passed to __call. Defaults to _false_.
         clone - An *optional table* to set as a clone, this value is what is returned. Defaults to 
             an _empty table_.
             
@@ -25,10 +36,13 @@ module( "otlib", package.seeall )
 
         v1.00 - Initial.
 ]]
-function Clone( base, clone )
+function Clone( base, callable, clone )
     clone = clone or {}
 	local mt = getmetatable( clone ) or {}
     mt.__index = base
+    if callable then
+        mt.__call = __call
+    end
     setmetatable( clone, mt )
     return clone
 end
@@ -103,7 +117,7 @@ end
     
     Merely serves as a convenient wrapper and root prototype.
 ]]
-object = Clone( table, { Clone = Clone, IsA = IsA, Parent=Parent } )
+object = Clone( table, false, { Clone = Clone, IsA = IsA, Parent=Parent } )
 --[[
     Functions: otlib.object
     

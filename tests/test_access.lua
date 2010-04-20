@@ -1,4 +1,4 @@
-operator    = otlib.groups.user:RegisterClonedGroup( "operator" )
+operator    = otlib.user:RegisterClonedGroup( "operator" )
 admin       = operator:RegisterClonedGroup( "admin" )
 superadmin  = admin:RegisterClonedGroup( "superadmin" )
 
