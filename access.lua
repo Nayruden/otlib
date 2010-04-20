@@ -3,16 +3,15 @@
 --- Module: otlib
 module( "otlib", package.seeall )
 
-
 --[[
-    Object: InvalidCondition
+    Object: otlib.InvalidCondition
 ]]
 InvalidCondition = object:Clone( true )
 
 --[[
     Variables: Denied Levels
     
-    This is used by a return from <group.CheckAccess> to specify what part of the access level an
+    This is used by a return from <otlib.group.CheckAccess> to specify what part of the access level an
     access check failed on.
         
     DeniedLevel.NoAccess - The user has no access to this command at all.
@@ -42,6 +41,12 @@ function InvalidCondition:SetLevel( level )
     
     return self
 end
+
+InvalidCondition.AccessDenied  = InvalidCondition( "access denied" )
+InvalidCondition.NotSpecified  = InvalidCondition( "argument is required and was left unspecified" )
+InvalidCondition.TooHigh       = InvalidCondition( "specified number %i is above your allowed maximum of %i" )
+InvalidCondition.TooLow        = InvalidCondition( "specified number %i is below your allowed minimum of %i" )
+InvalidCondition.InvalidNumber = InvalidCondition( "invalid number \"%s\" specified" )
 
 --- Section: Access Registration
 
@@ -142,15 +147,13 @@ end
 -- checking if someone has access to physgun another player, since you already have
 -- the parsed objects. Find a place to put parsing logic that makes sense!
 
-AccessDenied = InvalidCondition( "access denied" )
-
 --[[
     Function: CheckAccess
 ]]
 function group:CheckAccess( access, ... )
     local permission = self.allow[ access ]
     if not permission then
-        return false, AccessDenied():SetLevel( InvalidCondition.DeniedLevel.NoAccess )
+        return false, InvalidCondition.AccessDenied():SetLevel( InvalidCondition.DeniedLevel.NoAccess )
     end
     
     local args = { ... }
