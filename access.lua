@@ -3,6 +3,12 @@
 --- Module: otlib
 module( "otlib", package.seeall )
 
+
+--[[
+    Object: InvalidCondition
+]]
+InvalidCondition = object:Clone( true )
+
 --[[
     Variables: Denied Levels
     
@@ -15,11 +21,27 @@ module( "otlib", package.seeall )
     DeniedLevel.User - The specified arguments met the requirements for the access being used, but 
         not this particular user's access to the command.
 ]]
-DeniedLevel = {
+InvalidCondition.DeniedLevel = {
     NoAccess = 1,
     Access = 2,
     User = 3,
 }
+
+function InvalidCondition:Init( ... )
+    -- Dual purpose, can define the base with the unformatted string, or if we've already defined
+    -- the base, the arguments must be the format.
+    if self.unformatted then
+        self.message = self.unformatted:format( ... )
+    else
+        self.unformatted = (...)
+    end
+end
+
+function InvalidCondition:SetLevel( level )
+    self.level = level
+    
+    return self
+end
 
 --- Section: Access Registration
 
@@ -120,6 +142,7 @@ end
 -- checking if someone has access to physgun another player, since you already have
 -- the parsed objects. Find a place to put parsing logic that makes sense!
 
+AccessDenied = InvalidCondition( "access denied" )
 
 --[[
     Function: CheckAccess
@@ -127,21 +150,21 @@ end
 function group:CheckAccess( access, ... )
     local permission = self.allow[ access ]
     if not permission then
-        return false, "access denied"
+        return false, AccessDenied():SetLevel( InvalidCondition.DeniedLevel.NoAccess )
     end
     
     local args = { ... }
     for i, v in ipairs( access.params ) do
         local status, err = v:IsValid( self, args[ i ] )
         if not status then
-            return false, err
+            return false, err:SetLevel( InvalidCondition.DeniedLevel.Access )
         end
         
         -- If the permission isn't true it must be a table
         if permission ~= true and permission[ i ] then
             status, err = permission[ i ]:IsValid( self, args[ i ] )
             if not status then
-                return false, err
+                return false, err:SetLevel( InvalidCondition.DeniedLevel.User )
             end
         end
     end

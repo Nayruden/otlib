@@ -12,8 +12,17 @@ user1.allow[ slap ] = { -- TODO better way of setting this
 
 user2 = operator:RegisterUser( "321" )
 
-print( otlib.CheckAccess( "123", slap, 60 ) )
-print( otlib.CheckAccess( "321", slap, 6 ) )
+function checkAccess( id, access, ... )
+    local result, condition = otlib.CheckAccess( id, access, ... )
+    print( result )
+    if not result then
+        print( condition.message )
+        print( condition.level )
+    end
+end
 
-print( otlib.CheckAccess( "123", slap, -6 ) )
-print( otlib.CheckAccess( "321", slap, 6 ) )
+checkAccess( "123", slap, 60 )
+checkAccess( "321", slap, 6 ) 
+
+checkAccess( "123", slap, -6 )
+checkAccess( "321", slap, 6 ) 

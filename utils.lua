@@ -776,7 +776,7 @@ function ToBool( value )
 end
 
 local function call( self, ... )
-    self.__index = { n = select( "#", ... ), ... }
+    self.__index = { unpack = function() return unpack( self.__index ) end, n = select( "#", ... ), ... }
     return ...
 end
 
@@ -791,6 +791,9 @@ end
         A *table* that can be called and accepts any number of arguments, then stores and returns 
             the arguments as given. You can access the arguments in the table by index, or retrieve
             the total number of aruments from field 'n'.
+            
+        A function 'unpack' is also defined for the returned table which returns each argument just
+            like regular unpack does.
         
     Example:
 
