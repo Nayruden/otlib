@@ -4,7 +4,7 @@ Version 1.0
 
 Copyright (c) 2010 Team Omnivore
 
-http://somesite.org
+http://omnivr.net
 
 Topic: License
 This program is free software: you can redistribute it and/or modify

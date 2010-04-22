@@ -6,14 +6,7 @@ module( "otlib", package.seeall )
 BaseParam = object:Clone()
 BaseParam.optional = false
 
---[[
-    Variables: Messages
-    
-    Messages.NotSpecified - Message given when there is no specified value and the argument is not
-        optional.
-]]
-
-function BaseParam:Autocomplete( user, cmd, arg )
+function BaseParam:Parse( str )
     error( ErrorMessages.NotImplemented, 2 )
 end
 
@@ -25,6 +18,10 @@ function BaseParam:IsValid( user, arg )
     end
     
     return true
+end
+
+function BaseParam:Autocomplete( user, cmd, arg )
+    error( ErrorMessages.NotImplemented, 2 )
 end
 
 function BaseParam:Usage()
@@ -46,18 +43,6 @@ NumParam.min = -math.huge
 NumParam.max = math.huge
 NumParam.default = 0
 
---[[
-    Variables: Messages
-    
-    Messages.TooHigh - Message given when the specified value is too high.
-    Messages.TooLow - Message given when the specified value is too low.
-    Messages.Invalid - Message given when the specified value is not a number.
-]]
-
-
-function NumParam:Autocomplete( user, cmd, arg )
-    error( ErrorMessages.NotImplemented, 2 )
-end
 
 function NumParam:IsValid( user, arg )
     local ex = StoredExpression()
@@ -76,6 +61,10 @@ function NumParam:IsValid( user, arg )
     end
     
     return true
+end
+
+function NumParam:Autocomplete( user, cmd, arg )
+    error( ErrorMessages.NotImplemented, 2 )
 end
 
 function NumParam:Usage()

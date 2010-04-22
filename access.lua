@@ -3,16 +3,18 @@
 --- Module: otlib
 module( "otlib", package.seeall )
 
+
 --[[
     Object: otlib.InvalidCondition
 ]]
 InvalidCondition = object:Clone( true )
 
+
 --[[
     Variables: Denied Levels
     
-    This is used by a return from <otlib.group.CheckAccess> to specify what part of the access level an
-    access check failed on.
+    This is used in <InvalidCondition>, a return from <otlib.group.CheckAccess> to specify what 
+    part of the access level an access check failed on.
         
     DeniedLevel.NoAccess - The user has no access to this command at all.
     DeniedLevel.Access - The specified arguments did not meet the requirements for the access being 
@@ -26,6 +28,27 @@ InvalidCondition.DeniedLevel = {
     User = 3,
 }
 
+
+--[[
+    Function: Init
+    
+    Called when a new object is created by using the prototype as a functor.
+    
+    Parameters:
+    
+        ... - If this immediate parent of this new object is <InvalidCondition>, this value should
+            be a single *string* specifying the unformatted message for the condition. Otherwise,
+            the values should be any number of *any type* which is directly passed into format on
+            the unformatted string.
+            
+    Returns:
+    
+        The new object.
+        
+    Revisions:
+
+        v1.00 - Initial.
+]]
 function InvalidCondition:Init( ... )
     -- Dual purpose, can define the base with the unformatted string, or if we've already defined
     -- the base, the arguments must be the format.
@@ -36,12 +59,47 @@ function InvalidCondition:Init( ... )
     end
 end
 
+
+--[[
+    Function: SetLevel
+    
+    Sets the level for this invalid condition, see <Denied Levels>.
+    
+    Parameters:
+    
+        level - The *level* to set to.
+        
+    Returns:
+    
+        *Self*.
+        
+    Revisions:
+
+        v1.00 - Initial.
+]]
 function InvalidCondition:SetLevel( level )
     self.level = level
     
     return self
 end
 
+function InvalidCondition:GetLevel( level )
+    return self.level
+end
+
+function InvalidCondition:GetMessage()
+    return self.message
+end
+
+--[[
+    Variables: InvalidConditions
+    
+    AccessDenied - Given when the user has no permission to the access at all.
+    NotSpecified - Given when there is no specified value and the argument is not optional.
+    TooHigh - Given when the specified value is too high.
+    TooLow - Given when the specified value is too low.
+    Invalid - Given when the specified value is not a number.
+]]
 InvalidCondition.AccessDenied  = InvalidCondition( "access denied" )
 InvalidCondition.NotSpecified  = InvalidCondition( "argument is required and was left unspecified" )
 InvalidCondition.TooHigh       = InvalidCondition( "specified number %i is above your allowed maximum of %i" )
