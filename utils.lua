@@ -775,8 +775,9 @@ function ToBool( value )
     return true
 end
 
+-- This is used for stored expression, below
 local function call( self, ... )
-    self.__index = { unpack = function() return unpack( self.__index ) end, n = select( "#", ... ), ... }
+    self.__index = { unpack = function() return unpack( self.__index, 1, self.n ) end, n = select( "#", ... ), ... }
     return ...
 end
 

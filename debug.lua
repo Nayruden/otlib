@@ -19,7 +19,7 @@ local function VardumpHelper( value, depth, key, done )
     local t = type( value )    
     if t == "table" and not done[ value ] then
         done[ value ] = true
-        io.write( string.format( "(table: array size=%i, total size=%i)\n", #value, Count(value) ) )
+        io.write( string.format( "(table: array size=%i, total values=%i)\n", #value, Count(value) ) )
         for k, v in pairs( value ) do
             VardumpHelper( v, depth+1, k, done )
         end
@@ -152,7 +152,7 @@ end
 ]]
 function CheckArg( argnum, fn_name, expected, data, throw_level )
     local is_str = type( expected ) == "string"
-    if (is_str and type( data ) == expected) or (not is_str and (HasValueI( expected, type( data )))) then
+    if (is_str and type( data ) == expected) or (not is_str and (HasValueI( expected, type( data ) ))) then
         return true
     else
         return ThrowBadArg( argnum, fn_name, expected, data, throw_level or 4 )

@@ -1,28 +1,46 @@
-operator    = otlib.user:RegisterClonedGroup( "operator" )
-admin       = operator:RegisterClonedGroup( "admin" )
-superadmin  = admin:RegisterClonedGroup( "superadmin" )
+operator    = otlib.user:CreateClonedGroup( "operator" )
+admin       = operator:CreateClonedGroup( "admin" )
+superadmin  = admin:CreateClonedGroup( "superadmin" )
 
 slap = otlib.access:Register( "slap", otlib.admin )
-slap:AddParam( otlib.NumParam():Optional( true ):Min( 0 ):Max( 100 ) )
+slap:AddParam( otlib.NumParam():Min( 0 ):Max( 100 ) )
 
-user1 = admin:RegisterUser( "123" )
+user1 = admin:CreateClonedUser( "123" )
 user1.allow[ slap ] = { -- TODO better way of setting this
     slap.params[ 1 ]():Min( -50 ):Max( 50 )
 }
 
-user2 = operator:RegisterUser( "321" )
+user2 = operator:CreateClonedUser( "321" )
 
-function checkAccess( id, access, ... )
-    local result, condition = otlib.CheckAccess( id, access, ... )
-    print( result )
-    if not result then
-        print( condition.message )
-        print( condition.level )
-    end
-end
+local has_access, condition
+has_access, condition = otlib.CheckAccess( "123", slap, 0 )
+assert( has_access )
+assert( condition == nil )
 
-checkAccess( "123", slap, 60 )
-checkAccess( "321", slap, 6 ) 
+has_access, condition = otlib.CheckAccess( "123", slap, 50 )
+assert( has_access )
+assert( condition == nil )
 
-checkAccess( "123", slap, -6 )
-checkAccess( "321", slap, 6 ) 
+has_access, condition = otlib.CheckAccess( "123", slap )
+assert( not has_access )
+assert( condition:IsA( otlib.InvalidCondition.MissingRequiredParam ) )
+assert( condition:GetLevel() == otlib.InvalidCondition.DeniedLevel.Access )
+assert( condition:GetParameterNum() == 1 )
+
+has_access, condition = otlib.CheckAccess( "123", slap, 51 )
+assert( not has_access )
+assert( condition:IsA( otlib.InvalidCondition.TooHigh ) )
+assert( condition:GetLevel() == otlib.InvalidCondition.DeniedLevel.User )
+assert( condition:GetParameterNum() == 1 )
+
+has_access, condition = otlib.CheckAccess( "123", slap, -1 )
+assert( not has_access )
+assert( condition:IsA( otlib.InvalidCondition.TooLow ) )
+assert( condition:GetLevel() == otlib.InvalidCondition.DeniedLevel.Access )
+assert( condition:GetParameterNum() == 1 )
+
+has_access, condition = otlib.CheckAccess( "321", slap, 6 )
+assert( not has_access )
+assert( condition:IsA( otlib.InvalidCondition.AccessDenied ) )
+assert( condition:GetLevel() == otlib.InvalidCondition.DeniedLevel.NoAccess )
+assert( condition:GetParameterNum() == nil )

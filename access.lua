@@ -32,18 +32,15 @@ InvalidCondition.DeniedLevel = {
 --[[
     Function: Init
     
-    Called when a new object is created by using the prototype as a functor.
+    Called when a new InvalidCondition object is created by using the prototype as a functor.
     
     Parameters:
     
-        ... - If this immediate parent of this new object is <InvalidCondition>, this value should
-            be a single *string* specifying the unformatted message for the condition. Otherwise,
-            the values should be any number of *any type* which is directly passed into format on
-            the unformatted string.
-            
-    Returns:
-    
-        The new object.
+        ... - If this immediate parent of this new object is <InvalidCondition> (setuping up a new
+            invalid condition), this value should be a single *string* specifying the unformatted 
+            message for the condition. Otherwise, if the condition is already setup, the values 
+            should be any number of *any type* which is directly passed into format on the 
+            unformatted string.
         
     Revisions:
 
@@ -83,10 +80,80 @@ function InvalidCondition:SetLevel( level )
     return self
 end
 
-function InvalidCondition:GetLevel( level )
+
+--[[
+    Function: GetLevel
+    
+    Gets the level for the invalid condition, see <Denied Levels>.
+    
+    Returns:
+    
+        The *level*.
+        
+    Revisions:
+    
+        v1.00 - Initial.
+]]
+function InvalidCondition:GetLevel()
     return self.level
 end
 
+
+--[[
+    Function: SetParameterNum
+    
+    Sets the parameter number the invalid condition occured on.
+    
+    Parameters:
+    
+        num - The parameter *number*.
+        
+    Returns:
+    
+        *Self*.
+        
+    Revisions:
+
+        v1.00 - Initial.
+]]
+function InvalidCondition:SetParameterNum( num )
+    self.param_num = num
+    
+    return self
+end
+
+
+--[[
+    Function: GetParameterNum
+    
+    Gets the parameter number the invalid condition occured on, if applicable.
+    
+    Returns:
+    
+        The parameter *number* or *nil*. Nil is used when a parameter number is not applicable.
+        
+    Revisions:
+    
+        v1.00 - Initial.
+]]
+function InvalidCondition:GetParameterNum()
+    return self.param_num
+end
+
+
+--[[
+    Function: GetMessage
+    
+    Gets the message for the invalid condition, if one has been created yet.
+    
+    Returns:
+    
+        The *string* of the formatted message or *nil* if one has yet to be created.
+        
+    Revisions:
+    
+        v1.00 - Initial.
+]]
 function InvalidCondition:GetMessage()
     return self.message
 end
@@ -100,11 +167,11 @@ end
     TooLow - Given when the specified value is too low.
     Invalid - Given when the specified value is not a number.
 ]]
-InvalidCondition.AccessDenied  = InvalidCondition( "access denied" )
-InvalidCondition.NotSpecified  = InvalidCondition( "argument is required and was left unspecified" )
-InvalidCondition.TooHigh       = InvalidCondition( "specified number %i is above your allowed maximum of %i" )
-InvalidCondition.TooLow        = InvalidCondition( "specified number %i is below your allowed minimum of %i" )
-InvalidCondition.InvalidNumber = InvalidCondition( "invalid number \"%s\" specified" )
+InvalidCondition.AccessDenied           = InvalidCondition( "access denied" )
+InvalidCondition.MissingRequiredParam   = InvalidCondition( "argument is required and was left unspecified" )
+InvalidCondition.TooHigh                = InvalidCondition( "specified number %i is above your allowed maximum of %i" )
+InvalidCondition.TooLow                 = InvalidCondition( "specified number %i is below your allowed minimum of %i" )
+InvalidCondition.InvalidNumber          = InvalidCondition( "invalid number \"%s\" specified" )
 
 --- Section: Access Registration
 
@@ -176,8 +243,8 @@ group.allow = object:Clone()
 groups.user = group -- Register root group by hand
 user = group -- User group is root group
 
-function group:RegisterClonedGroup( name )
-	local new = self:Clone()
+function group:CreateClonedGroup( name )
+    local new = self:Clone()
     groups[ name ] = new
     new.allow = self.allow:Clone()
     
@@ -188,16 +255,31 @@ end
 
 local alias_to_user = {}
 
-function group:RegisterUser( ... )
+function group:CreateClonedUser( ... )
     local new = self:Clone()
     new.allow = self.allow:Clone()
     new.aliases = {}
     for i, v in ipairs( { ... } ) do
-        table.insert( new, v )
-        alias_to_user[ v ] = new
+        new:RegisterAlias( v )
     end
     
     return new
+end
+
+function group:RegisterAlias( alias )
+    if not HasValueI( self.aliases, alias ) then
+        if alias_to_user[ alias ] then
+            return error( "tried to re-register existing alias '" .. alias .. "'" )
+        end
+        
+        table.insert( self.aliases, alias )
+        alias_to_user[ alias ] = self
+    end
+    
+    return self
+end
+
+function group:Allow()
 end
 
 -- Future note:
@@ -207,6 +289,32 @@ end
 
 --[[
     Function: CheckAccess
+    
+    Checks if a user or group can use an access with specified, parsed arguments. 'Parsed 
+    arguments' simply means that numbers should come in as number types, bools as bools, etc.
+
+    Parameters:
+
+        access - The *<access> object* to check permission against.
+        ... - *Optional*, any number of arguments of *any type* to check the permission against.
+
+    Returns:
+
+        1 - A *boolean* of whether or not they have permission to the <access> object taking the
+            specified parameters into account.
+        2 - An *<InvalidCondition> object* if they don't have permission, *nil* if they do. The 
+            object is passed back to specify why they don't have access.
+            
+    Notes:
+    
+        * It's very important to remember that this function takes arguments into account. They
+            might have permission under certain circumstances, but if you don't pass appropriate
+            arguments in, it will still deny the access. If you want to know if they'd have access
+            under any circumstances, check the second return value.
+
+    Revisions:
+
+        v1.00 - Initial.
 ]]
 function group:CheckAccess( access, ... )
     local permission = self.allow[ access ]
@@ -218,14 +326,14 @@ function group:CheckAccess( access, ... )
     for i, v in ipairs( access.params ) do
         local status, err = v:IsValid( self, args[ i ] )
         if not status then
-            return false, err:SetLevel( InvalidCondition.DeniedLevel.Access )
+            return false, err:SetLevel( InvalidCondition.DeniedLevel.Access ):SetParameterNum( i )
         end
         
         -- If the permission isn't true it must be a table
         if permission ~= true and permission[ i ] then
             status, err = permission[ i ]:IsValid( self, args[ i ] )
             if not status then
-                return false, err:SetLevel( InvalidCondition.DeniedLevel.User )
+                return false, err:SetLevel( InvalidCondition.DeniedLevel.User ):SetParameterNum( i )
             end
         end
     end

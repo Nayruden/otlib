@@ -13,7 +13,7 @@ end
 function BaseParam:IsValid( user, arg )
     if arg == nil then
         if not self.optional then
-            return false, InvalidCondition.NotSpecified()
+            return false, InvalidCondition.MissingRequiredParam()
         end
     end
     
@@ -39,8 +39,8 @@ function BaseParam:Default( default )
 end
 
 NumParam = BaseParam:Clone( true )
-NumParam.min = -math.huge
-NumParam.max = math.huge
+NumParam.min = nil
+NumParam.max = nil
 NumParam.default = 0
 
 
@@ -54,9 +54,9 @@ function NumParam:IsValid( user, arg )
         arg = self.default
     end
     
-    if arg < self.min then
+    if self.min and arg < self.min then
         return false, InvalidCondition.TooLow( arg, self.min )
-    elseif arg > self.max then
+    elseif self.max and arg > self.max then
         return false, InvalidCondition.TooHigh( arg, self.max )
     end
     
