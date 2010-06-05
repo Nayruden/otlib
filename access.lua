@@ -224,6 +224,20 @@ function access:AddParam( param )
     table.insert( self.params, param )
 end
 
+function access:ModifyParam( param_num )
+    if not self.params[ param_num ] then return nil end
+    self.params[ param_num ] = self.params[ param_num ]:Clone()
+    
+    return self.params[ param_num ]
+end
+
+function access:Clone( ... )
+    local new = Clone( self, ... )
+    new.params = Clone( self.params )
+    
+    return new
+end
+
 --- Section: Group Access
 
 local groups = {}
@@ -269,7 +283,7 @@ end
 function group:RegisterAlias( alias )
     if not HasValueI( self.aliases, alias ) then
         if alias_to_user[ alias ] then
-            return error( "tried to re-register existing alias '" .. alias .. "'" )
+            -- return error( "tried to re-register existing alias '" .. alias .. "'" ) -- TOOD, readd
         end
         
         table.insert( self.aliases, alias )
@@ -279,7 +293,11 @@ function group:RegisterAlias( alias )
     return self
 end
 
-function group:Allow()
+function group:Allow( access )
+    local new = access:Clone()
+    self.allow[ access ] = new
+    
+    return new
 end
 
 -- Future note:
@@ -323,15 +341,15 @@ function group:CheckAccess( access, ... )
     end
     
     local args = { ... }
-    for i, v in ipairs( access.params ) do
-        local status, err = v:IsValid( self, args[ i ] )
+    for i, param in ipairs( access.params ) do
+        local status, err = param:IsValid( self, args[ i ] )
         if not status then
             return false, err:SetLevel( InvalidCondition.DeniedLevel.Access ):SetParameterNum( i )
         end
         
-        -- If the permission isn't true it must be a table
-        if permission ~= true and permission[ i ] then
-            status, err = permission[ i ]:IsValid( self, args[ i ] )
+        -- If the permission isn't true it must be a derived permission
+        if permission ~= true then
+            status, err = permission.params[ i ]:IsValid( self, args[ i ] )
             if not status then
                 return false, err:SetLevel( InvalidCondition.DeniedLevel.User ):SetParameterNum( i )
             end

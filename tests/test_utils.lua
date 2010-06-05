@@ -80,6 +80,9 @@ assert( TableEq( t, { "arg1" } ) )
 t = otlib.ParseArgs( "arg1\"" )
 assert( TableEq( t, { "arg1", "" } ) )
 
+t = otlib.ParseArgs( "this \"is a\"bad way\"to make\" a sentence" )
+assert( TableEq( t, { "this", "is a", "bad", "way", "to make", "a", "sentence" } ) )
+
 -- Test Count
 t = { 1, 3, "two", [{}]=4 }
 assert( otlib.Count( t ) == 4 )

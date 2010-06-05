@@ -6,9 +6,8 @@ slap = otlib.access:Register( "slap", otlib.admin )
 slap:AddParam( otlib.NumParam():Min( 0 ):Max( 100 ) )
 
 user1 = admin:CreateClonedUser( "123" )
-user1.allow[ slap ] = { -- TODO better way of setting this
-    slap.params[ 1 ]():Min( -50 ):Max( 50 )
-}
+local access = user1:Allow( slap )
+access:ModifyParam( 1 ):Min( -50 ):Max( 50 )
 
 user2 = operator:CreateClonedUser( "321" )
 

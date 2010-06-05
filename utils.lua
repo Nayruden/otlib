@@ -35,13 +35,17 @@ module( "otlib", package.seeall )
         
     Notes:
     
-        * If separator is the empty string (""), this function loops infinitely.
+        * If separator is the empty string (""), this function throws an error.
 
     Revisions:
 
         v1.00 - Initial.
 ]]
 function Explode( str, separator, plain, limit )
+    if separator == "" then 
+        return error( "empty separator passed, would result in an infinite loop", 2 )
+    end
+    
     separator = separator or "%s+"
     local t = {}
     local curpos = 1
@@ -83,7 +87,7 @@ end
         v1.00 - Initial.
 ]]
 function Trim( str )
-    return str:match'^()%s*$' and '' or str:match'^%s*(.*%S)'
+    return str:match( '^()%s*$' ) and '' or str:match( '^%s*(.*%S)' )
 end
 
 
