@@ -83,6 +83,12 @@ assert( TableEq( t, { "arg1", "" } ) )
 t = otlib.ParseArgs( "this \"is a\"bad way\"to make\" a sentence" )
 assert( TableEq( t, { "this", "is a", "bad", "way", "to make", "a", "sentence" } ) )
 
+
+-- Test EditDistance
+assert( otlib.EditDistance( "Tuesday", "Teusday" ) == 1 )
+assert( otlib.EditDistance( "kitten", "sitting" ) == 3 )
+
+
 -- Test Count
 t = { 1, 3, "two", [{}]=4 }
 assert( otlib.Count( t ) == 4 )

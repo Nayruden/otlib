@@ -7,6 +7,7 @@ module( "otlib", package.seeall )
 -- TODO, more automated
 dofile "init.lua"
 dofile "utils.lua"
+dofile "table_utils.lua"
 dofile "prototype.lua"
 dofile "access.lua"
 dofile "debug.lua"
@@ -26,3 +27,4 @@ function DoTests()
         print() -- Empty line
     end
 end
+DoTests()
