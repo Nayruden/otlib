@@ -40,12 +40,21 @@ module( "otlib", package.seeall )
 
         The *number* of elements in the table.
         
+    Example:
+    
+        :Count( { "apple", "pear", done=true, banana="yellow" } )
+        
+        returns...
+        
+        :4
+        
     Notes:
     
         * This is slow and should be avoided if at all possible.
         * Use the '#' operator instead of this if the table only contains numeric indices or if you
             you only care about the numeric indices.
-        * Use <IsEmpty> instead of this if you want to see if a hash table has any values.
+        * Use <IsEmpty> instead of this if you only want to see if a hash table has any values.
+        * Complexity is O( n ), where n is the number of values in t.
 
     Revisions:
 
@@ -72,12 +81,13 @@ end
         
     Returns:
     
-        A *boolean*, true if t has one or more values, false otherwise.
+        A *boolean*, true if the table t has one or more values, false otherwise.
         
     Notes:
         
         * This is much faster than <Count> for checking if a table has any elements, but you should
             still use the '#' operator instead of this if you only care about numeric indices.
+        * Complexity is O( 1 ).
         
     Revisions:
 
@@ -110,6 +120,10 @@ end
     Returns:
 
         The copied *table*.
+        
+    Notes:
+        
+        * Complexity is O( Count( t ) ).
 
     Revisions:
 
@@ -138,7 +152,60 @@ local function InPlaceHelper( iterator, table_a, in_place )
     end
 end
 
-local function UnionWith( iterator, table_a, table_b, in_place )
+
+--[[
+    Function: RemoveDuplicateValues
+
+    Removes any duplicate values from a list.
+
+    Parameters:
+
+        t - The *list table* to remove duplciates from.
+        in_place - An *optional boolean* specifying whether or not the deletions should be done in 
+            place to table_a. Defaults to _false_.
+
+    Returns:
+
+        The *list table* with duplicates removed. Returns t if in_place is true, a new table
+            otherwise.
+            
+    Example:
+    
+        :RemoveDuplicateValues( { "apple", "pear", "kiwi", "apple", "banana", "pear", "pear" } )
+        
+        returns...
+        
+        :{ "apple", "pear", "kiwi", "banana" }
+        
+    Notes:
+        
+        * This function operates over numeric indices. See <A Discussion On ipairs>.
+        * Complexity is around O( #t * log( #t ) ).
+        * Duplicates are removed after the first value occurs. See example above.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
+function RemoveDuplicateValues( t, in_place )
+    t = InPlaceHelper( ipairs, t, in_place )
+    
+    local i = 1
+    local v = t[ i ]
+    while v ~= nil do
+        for j=1, i-1 do
+            if t[ j ] == v then
+                table.remove( t, i )
+                i = i - 1 -- Since we removed it and it will be incremented below otherwise
+                break
+            end
+        end
+        i = i + 1
+        v = t[ i ]
+    end
+end
+
+local function UnionByKeyWith( iterator, table_a, table_b, in_place )
     table_a = InPlaceHelper( iterator, table_a, in_place )
 
     for k, v in iterator( table_b ) do
@@ -150,51 +217,113 @@ end
 
 
 --[[
-    Function: Union
+    Function: UnionByKey
 
     Merges two tables by key. If both tables have values on the same key, table_b takes precedence.
 
     Parameters:
 
-        table_a - The first *table* in the union. If in_place is true, table_b is merged to this
-            table.
+        table_a - The first *table* in the union. If in_place is true, all operations occur on 
+            this table, if in_place is false, all operations occur on a copy of the table.
         table_b - The second *table* in the union.
-        in_place - An *optional boolean* specifying whether or not this should be an in place union to
-            table_a. Defaults to _false_.
+        in_place - An *optional boolean* specifying whether or not this should be an in place union
+            to table_a. Defaults to _false_.
 
+    Returns:
+
+        The union *table*. Returns table_a if in_place is true, a new table otherwise.
+        
     Example:
 
-        :Union( { apple="red", pear="green", kiwi="hairy" },
+        :UnionByKey( { apple="red", pear="green", kiwi="hairy" },
         :       { apple="green", pear="green", banana="yellow" } )
 
         returns...
 
         :{ apple="green", pear="green", kiwi="hairy", banana="yellow" }
-
-    Returns:
-
-        The union *table*. Returns table_a if in_place is true, a new table otherwise.
+        
+    Notes:
+    
+        * Complexity is O( Count( table_b ) ).
 
     Revisions:
 
         v1.00 - Initial.
 ]]
-function Union( table_a, table_b, in_place )
-    return UnionWith( pairs, table_a, table_b, in_place )
+function UnionByKey( table_a, table_b, in_place )
+    return UnionByKeyWith( pairs, table_a, table_b, in_place )
 end
 
 
 --[[
-    Function: UnionI
+    Function: UnionByKeyI
 
-    Exactly the same as <Union> except that it uses ipairs instead of pairs. In general, this means
-    that it only merges on numeric keys. See <A Discussion On ipairs>.
+    Exactly the same as <UnionByKey> except that it uses ipairs instead of pairs. In general, this
+    means that it only merges on numeric keys. See <A Discussion On ipairs>.
 ]]
-function UnionI( table_a, table_b, in_place )
-    return UnionWith( ipairs, table_a, table_b, in_place )
+function UnionByKeyI( table_a, table_b, in_place )
+    return UnionByKeyWith( ipairs, table_a, table_b, in_place )
 end
 
-local function IntersectionWith( iterator, table_a, table_b, in_place )
+
+--[[
+    Function: UnionByValue
+
+    Gets the union of two lists by value. If a value occurs once in list_a and once in list_b, the
+    result of the union will only occur one instance of that value as well.
+
+    Parameters:
+
+        list_a - The first *list table* in the union. If in_place is true, all operations occur on
+            this table, if in_place is false, all operations occur on a copy of the table.
+        list_b - The second *list table* in the union.
+        in_place - An *optional boolean* specifying whether or not this should be an in place union to
+            table_a. Defaults to _false_.
+
+    Returns:
+
+        The union *list table*. Returns table_a if in_place is true, a new table otherwise.
+        
+    Example:
+
+        :UnionByValue( { "apple", "pear", "kiwi" },
+        :       { "pear", "apple", "banana" } )
+
+        returns...
+
+        :{ "apple", "pear", "kiwi", "banana" }
+        
+    Notes:
+
+        * This function operates over numeric indices. See <A Discussion On ipairs>.
+        * The elements that in the returned table are in the same order they were in 
+            table_a and then table_b. See example above.
+        * This function properly handles duplicate values in either list. All values will be
+            unique in the resulting list.
+        * Complexity is O( #table_a * #table_b ), so you might want to consider using <SetFromList>
+            combined with <UnionByKey> for large tables or if you plan on doing this often.        
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
+function UnionByValue( list_a, list_b, in_place )
+    list_a = RemoveDuplicates( list_a, in_place )
+    
+    local i = 1
+    local v = list_b[ i ]
+    while v ~= nil do
+        if not HasValueI( list_a, v ) then
+            table.insert( list_a, v )
+            i = i + 1
+            v = list_b[ i ]
+        end
+    end
+    
+    return list_a
+end
+
+local function IntersectionByKeyWith( iterator, table_a, table_b, in_place )
     local result
     if not in_place then
         result = {}
@@ -213,52 +342,113 @@ end
 
 
 --[[
-    Function: Intersection
+    Function: IntersectionByKey
 
     Gets the intersection of two tables by key. If both tables have values on the same key, table_b
     takes precedence.
 
     Parameters:
 
-        table_a - The first *table* in the intersection. If in_place is true, table_b is merged to 
-            this table.
+        table_a - The first *table* in the intersection. If in_place is true, all operations occur 
+            on this table, if in_place is false, all operations occur on a copy of the table.
         table_b - The second *table* in the interesection.
-        in_place - An *optional boolean* specifying whether or not this should be an in place intersection to
-            table_a. Defaults to _false_.
+        in_place - An *optional boolean* specifying whether or not this should be an in place 
+            intersection to table_a. Defaults to _false_.
 
+    Returns:
+
+        The intersection *table*. Returns table_a if in_place is true, a new table otherwise.
+        
     Example:
 
-        :Intersection( { apple="red", pear="green", kiwi="hairy" },
+        :IntersectionByKey( { apple="red", pear="green", kiwi="hairy" },
         :       { apple="green", pear="green", banana="yellow" } )
 
         returns...
 
         :{ apple="green", pear="green" }
-
-    Returns:
-
-        The intersection *table*. Returns table_a if in_place is true, a new table otherwise.
+        
+    Notes:
+        
+        * Complexity is O( Count( table_a ) ).
 
     Revisions:
 
         v1.00 - Initial.
 ]]
-function Intersection( table_a, table_b, in_place )
-    return IntersectionWith( pairs, table_a, table_b, in_place )
+function IntersectionByKey( table_a, table_b, in_place )
+    return IntersectionByKeyWith( pairs, table_a, table_b, in_place )
 end
 
 
 --[[
-    Function: IntersectionI
+    Function: IntersectionByKeyI
 
-    Exactly the same as <Intersection> except that it uses ipairs instead of pairs. In general, 
-    this means that it only merges on numeric keys. See <A Discussion On ipairs>.
+    Exactly the same as <IntersectionByKey> except that it uses ipairs instead of pairs. In 
+    general, this means that it only merges on numeric keys. See <A Discussion On ipairs>.
 ]]
-function IntersectionI( table_a, table_b, in_place )
-    return IntersectionWith( ipairs, table_a, table_b, in_place )
+function IntersectionByKeyI( table_a, table_b, in_place )
+    return IntersectionByKeyWith( ipairs, table_a, table_b, in_place )
 end
 
-local function DifferenceWith( iterator, table_a, table_b, in_place )
+
+--[[
+    Function: IntersectionByValue
+
+    Gets the intersection of two lists by value.
+
+    Parameters:
+
+        list_a - The first *list table* in the intersection. If in_place is true, all operations 
+            occur on this table, if in_place is false, all operations occur on a copy of the table.
+        list_b - The second *list table* in the interesection.
+        in_place - An *optional boolean* specifying whether or not this should be an in place 
+            intersection to table_a. Defaults to _false_.
+
+    Returns:
+
+        The intersection *list table*. Returns table_a if in_place is true, a new table otherwise.
+        
+    Example:
+
+        :IntersectionByValue( { "apple", "pear", "kiwi" }, { "pear", "apple", "banana" } )
+
+        returns...
+
+        :{ "apple", "pear" }
+        
+    Notes:
+
+        * This function operates over numeric indices. See <A Discussion On ipairs>.
+        * The elements that are left in the returned table are in the same order they were in 
+            table_a. See example above.
+        * This function properly handles duplicate values in either list. All values will be
+            unique in the resulting list.
+        * Complexity is O( #table_a * #table_b ), so you might want to consider using <SetFromList>
+            combined with <IntersectionByKey> for large tables or if you plan on doing this often.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
+function IntersectionByValue( list_a, list_b, in_place )
+    list_a = RemoveDuplicateValues( list_a, in_place )
+    
+    local i = 1
+    local v = list_a[ i ]
+    while v ~= nil do
+        if HasValueI( list_b, v ) then
+            i = i + 1
+            v = list_a[ i ]
+        else
+            table.remove( list_a, i )
+        end
+    end
+    
+    return list_a
+end
+
+local function DifferenceByKeyWith( iterator, table_a, table_b, in_place )
     table_a = InPlaceHelper( iterator, table_a, in_place )
     
     for k, v in iterator( table_b ) do
@@ -270,66 +460,113 @@ end
 
 
 --[[
-    Function: Difference
+    Function: DifferenceByKey
 
     Gets the difference of two tables by key. Difference is defined as all the keys in table A that
     are not in table B.
 
     Parameters:
 
-        table_a - The first *table* in the difference. If in_place is true, keys from table_b are
-            removed from this table.
+        table_a - The first *table* in the difference. If in_place is true, all operations occur
+            on this table, if in_place is false, all operations occur on a copy of the table.
         table_b - The second *table* in the difference.
         in_place - An *optional boolean* specifying whether or not this should be an in place 
             difference operation on table_a. Defaults to _false_.
 
+    Returns:
+
+        The difference *table*. Returns table_a if in_place is true, a new table otherwise.
+        
     Example:
 
-        :Difference( { apple="red", pear="green", kiwi="hairy" },
+        :DifferenceByKey( { apple="red", pear="green", kiwi="hairy" },
         :            { apple="green", pear="green", banana="yellow" } )
 
         returns...
 
         :{ kiwi="hairy" }
+        
+    Notes:
 
-    Returns:
-
-        The difference *table*. Returns table_a if in_place is true, a new table otherwise.
+        * Complexity is O( Count( table_a ) ).
 
     Revisions:
 
         v1.00 - Initial.
 ]]
-function Difference( table_a, table_b, in_place )
-    return DifferenceWith( pairs, table_a, table_b, in_place )
+function DifferenceByKey( table_a, table_b, in_place )
+    return DifferenceByKeyWith( pairs, table_a, table_b, in_place )
 end
 
 
 --[[
-    Function: DifferenceI
+    Function: DifferenceByKeyI
 
-    Exactly the same as <Difference> except that it uses ipairs instead of pairs. In general, this means
-    that it only performs the difference on numeric keys. See <A Discussion On ipairs>.
+    Exactly the same as <DifferenceByKey> except that it uses ipairs instead of pairs. In general,
+    this means that it only performs the difference on numeric keys. See <A Discussion On ipairs>.
 ]]
-function DifferenceI( table_a, table_b, in_place )
-    return DifferenceWith( ipairs, table_a, table_b, in_place )
+function DifferenceByKeyI( table_a, table_b, in_place )
+    return DifferenceByKeyWith( ipairs, table_a, table_b, in_place )
 end
 
-local function IntersectionWith( iterator, table_a, table_b, in_place )
-    local result
-    if not in_place then
-        result = {}
-    else
-        result = table_a
+
+--[[
+    Function: DifferenceByValue
+
+    Gets the difference of two lists by value.
+
+    Parameters:
+
+        table_a - The first *list table* in the difference. If in_place is true, all operations 
+            occur on this table, if in_place is false, all operations occur on a copy of the table.
+        table_b - The second *list table* in the difference.
+        in_place - An *optional boolean* specifying whether or not this should be an in place 
+            difference operation on table_a. Defaults to _false_.
+            
+    Returns:
+
+        The difference *list table*. Returns table_a if in_place is true, a new table otherwise.
+        
+    Example:
+
+        :DifferenceByValue( { "apple", "pear", "kiwi" }, { "pear", "apple", "banana" } )
+
+        returns...
+
+        :{ "kiwi" }
+
+        
+    Notes:
+
+        * This function operates over numeric indices. See <A Discussion On ipairs>.
+        * The elements that are left in the returned table are in the same order they were in 
+            table_a. See example above.
+        * This function properly handles duplicate values in either list. All values will be
+            unique in the resulting list.
+        * Complexity is O( #table_a * #table_b ), so you might want to consider using <SetFromList>
+            combined with <DifferenceByKey> for large tables or if you plan on doing this often.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
+function DifferenceByValue( list_a, list_b, in_place )
+    list_a = InPlaceHelper( ipairs, list_a, in_place )
+    
+    local i = 1
+    local v = list_b[ i ]
+    local has_value, index_value
+    while v ~= nil do
+        has_value, index_value = HasValueI( list_a, v )
+        while has_value do
+            table.remove( list_a, index_value )
+            has_value, index_value = HasValueI( list_a, v )
+        end
+        i = i + 1
+        v = list_b[ i ]
     end
     
-    -- Now just fill in each value with whatever the value in table_k is. This takes care of both
-    -- elimination and making table b take precedence when both tables have a value on key k.
-    for k, v in iterator( table_a ) do
-        result[ k ] = table_b[ k ]
-    end
-    
-    return result
+    return list_a
 end
 
 
@@ -362,6 +599,7 @@ end
     Notes:
 
         * This function uses ipairs during the conversion process. See <A Discussion On ipairs>.
+        * Complexity is O( #list )
         
     Revisions:
 

@@ -4,47 +4,53 @@
 module( "otlib", package.seeall )
 
 local function VardumpHelper( value, depth, key, done )
-    io.write( string.rep( "  ", depth ) )
+    local str = string.rep( "  ", depth )
     
     if key ~= nil then
         local t = type( key )
         if t == "string" then
-            io.write( string.format( "%q", key ) )
+            str = str .. string.format( "%q", key )
         else
-            io.write( tostring( key ) )
+            str = str .. tostring( key )
         end
-        io.write( " = " )
+        str = str .. " = "
     end
     
     local t = type( value )    
     if t == "table" and not done[ value ] then
         done[ value ] = true
-        io.write( string.format( "(table: array size=%i, total values=%i)\n", #value, Count(value) ) )
+        str = str .. string.format( "(table: array size=%i, total values=%i)\n", #value, Count(value) )
         for k, v in pairs( value ) do
-            VardumpHelper( v, depth+1, k, done )
+            str = str .. VardumpHelper( v, depth+1, k, done )
         end
     elseif t == "string" then
-        io.write( string.format( "%q", value ), "\n" )
+        str = str .. string.format( "%q\n", value )
     else
-        io.write( tostring( value ), "\n" )
+        str = str .. tostring( value ) .. "\n"
     end
+    
+    return str
 end
 
 
 --[[
     Function: Vardump
 
-    Prints useful information about variables.
+    Returns useful, readable information about variables.
 
     Parameters:
 
         ... - Accepts any number of parameters of *any type* and prints them one by one.
+        
+    Returns:
+    
+        A readable *string* serialization of the data passed in.
 
     Example:
 
         :Vardump( { "foo", apple="green", floor=41, shopping={ "milk", "cookies" } } )
 
-        prints...
+        returns...
 
         :(table: array size=1, total size=4)
         :  1 = "foo"
@@ -68,10 +74,13 @@ end
         v1.00 - Initial.
 ]]
 function Vardump( ... )
+    local str = ""
     local t = { ... }
     for i=1, select( "#", ... ) do
-        VardumpHelper( t[ i ], 0, nil, {} )
+        str = str .. VardumpHelper( t[ i ], 0, nil, {} )
     end
+    
+    return str
 end
 
 

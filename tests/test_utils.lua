@@ -1,156 +1,153 @@
-local function TableEq( t1, t2 )
-    local c1 = 0
-    for k, v in pairs( t1 ) do
-        c1 = c1 + 1
-        if t1[ k ] ~= t2[ k ] then
-            return false
-        end
-    end
-    
-    for k, v in pairs( t2 ) do
-        c1 = c1 - 1
-    end
-    
-    if not c1 == 0 then return false end
-    return true
+dofile( "tests/luaunit.lua" )
+
+module( "TestUtils", package.seeall )
+
+function TestExplode()
+    AssertTablesEqual( otlib.Explode( "howdy \they  mother " ), { "howdy", "hey", "mother", "" } )
+    AssertTablesEqual( otlib.Explode( "line1\n\nline3", "\n", true ), { "line1", "", "line3" } )
+    AssertTablesEqual( otlib.Explode( "line1\n+\n+line3", "\n+", true ), { "line1", "", "line3" } )
+    AssertTablesEqual( otlib.Explode( "line1\n+\n+line3", "\n+", true, 2 ), { "line1", "\n+line3" } )
 end
 
-local function printt( t )
-    print( "---" )
-    for k, v in ipairs( t ) do
-        print( string.format( "%q", v ) )
-    end
-    print( "---" )
+function TestTrim()
+    AssertEquals( otlib.Trim( " test\t" ), "test" )
+    AssertEquals( otlib.Trim( " test" ), "test" )
+    AssertEquals( otlib.Trim( "test\t" ), "test" )
+    AssertEquals( otlib.Trim( "abcd" ), "abcd" )
+    AssertEquals( otlib.Trim( "" ), "" )
 end
 
--- Test Explode
-t = otlib.Explode( "howdy \they  mother " )
-assert( TableEq( t, { "howdy", "hey", "mother", "" } ) )
+function TestStripComments()
+    local data = "Line 1 # My comment\n#Line with only a comment\nLine 2"
+    AssertEquals( otlib.StripComments( data, "#"), "Line 1 \n\nLine 2" )
+end
 
+function TestRound()
+    AssertEquals( otlib.Round( 41.41 ), 41 )
+    AssertEquals( otlib.Round( 41.50, 0 ), 42 )
+    AssertEquals( otlib.Round( 41.499999999999, 0 ), 41 )
+    AssertEquals( otlib.Round( 414, -1 ), 410 )
+    AssertEquals( otlib.Round( 41.4099, 2 ), 41.41 )
+end
 
--- Test Trim
-assert( otlib.Trim( " test\t" ) == "test" )
-assert( otlib.Trim( "abcd" ) == "abcd" )
-assert( otlib.Trim( "" ) == "" )
+function TestParseArgs()
+    local t = otlib.ParseArgs( 'This is a "Cool sentence to" make "split up"' )
+    AssertTablesEqual( t, { "This", "is", "a", "Cool sentence to", "make", "split up" } )
 
+    t = otlib.ParseArgs( "onearg" )
+    AssertTablesEqual( t, { "onearg" } )
 
--- Test StripComments
-t = otlib.StripComments( "Line 1 # My comment\n#Line with only a comment\nLine 2", "#" )
-assert( t == "Line 1 \n\nLine 2" )
+    t = otlib.ParseArgs( "onearg twoarg" )
+    AssertTablesEqual( t, { "onearg", "twoarg" } )
 
+    t = otlib.ParseArgs( 'hey" bob person"' )
+    AssertTablesEqual( t, { "hey", " bob person" } )
 
--- Test Round
-assert( 41 == otlib.Round( 41.41 ) )
-assert( 42 == otlib.Round( 41.50, 0 ) )
-assert( 410 == otlib.Round( 414, -1 ) )
-assert( 41.41 == otlib.Round( 41.4099, 2 ) )
+    t = otlib.ParseArgs( 'hey" bob person space" ' )
+    AssertTablesEqual( t, { "hey", " bob person space" } )
 
+    t = otlib.ParseArgs( 'hey" arg2 and stuff' )
+    AssertTablesEqual( t, { "hey", " arg2 and stuff" } )
 
--- Test ParseArgs
-t = otlib.ParseArgs( "This is a \"Cool sentence to\" make \"split up\"" )
-assert( TableEq( t, { "This", "is", "a", "Cool sentence to", "make", "split up" } ) )
+    t = otlib.ParseArgs( "{" )
+    AssertTablesEqual( t, { "{" } )
 
-t = otlib.ParseArgs( "onearg" )
-assert( TableEq( t, { "onearg" } ) )
+    t = otlib.ParseArgs( '"arg1" "arg2"' )
+    AssertTablesEqual( t, { "arg1", "arg2" } )
 
-t = otlib.ParseArgs( "onearg twoarg" )
-assert( TableEq( t, { "onearg", "twoarg" } ) )
+    t = otlib.ParseArgs( '  "arg1" ' )
+    AssertTablesEqual( t, { "arg1" } )
 
-t = otlib.ParseArgs( "hey\" bob person\"" )
-assert( TableEq( t, { "hey", " bob person" } ) )
+    t = otlib.ParseArgs( '"arg1"' )
+    AssertTablesEqual( t, { "arg1" } )
 
-t = otlib.ParseArgs( "hey\" bob person space\" " )
-assert( TableEq( t, { "hey", " bob person space", "" } ) )
+    t = otlib.ParseArgs( 'arg1"' )
+    AssertTablesEqual( t, { "arg1", "" } )
 
-t = otlib.ParseArgs( "hey\" arg2 and stuff" )
-assert( TableEq( t, { "hey", " arg2 and stuff" } ) )
+    t = otlib.ParseArgs( 'this "is a"bad way"to make" a sentence' )
+    AssertTablesEqual( t, { "this", "is a", "bad", "way", "to make", "a", "sentence" } )
+end
 
-t = otlib.ParseArgs( "{" )
-assert( TableEq( t, { "{" } ) )
+function TestEditDistance()
+    AssertEquals( otlib.EditDistance( "Tuesday", "Teusday" ), 1 )
+    AssertEquals( otlib.EditDistance( "kitten", "sitting" ), 3 )
+end
 
-t = otlib.ParseArgs( "\"arg1\" \"arg2\"" )
-assert( TableEq( t, { "arg1", "arg2" } ) )
+function TestCount()
+    AssertEquals( otlib.Count( { 1, 3, "two", [{}]=4 } ), 4 )
+    AssertEquals( otlib.Count( {} ), 0 )
+end
 
-t = otlib.ParseArgs( "  \"arg1\" " )
-assert( TableEq( t, { "arg1" } ) )
+function TestIsEmpty()
+    AssertEquals( otlib.IsEmpty( {} ), true )
+    AssertEquals( otlib.IsEmpty( { "one" } ), false )
+    AssertEquals( otlib.IsEmpty( { [{}]="apple" } ), false )
+end
 
-t = otlib.ParseArgs( "\"arg1\"" )
-assert( TableEq( t, { "arg1" } ) )
+function TestCopy()
+    local t = { [1]="hey", blah=67, mango="one" }
+    AssertTablesEqual( otlib.Copy( t ), t )
+    AssertTablesEqual( otlib.CopyI( t ), { "hey" } )
+    
+    t = { [1]="one", [2]="two" }
+    AssertTablesEqual( t, otlib.Copy( t ) )
+    AssertTablesEqual( t, otlib.CopyI( t ) )
+end
 
-t = otlib.ParseArgs( "arg1\"" )
-assert( TableEq( t, { "arg1", "" } ) )
+function TestUnion()
+    local t, u = { apple="red", pear="green", kiwi="hairy" }, { apple="green", pear="green", banana="yellow" }
+    AssertTablesEqual( otlib.UnionByKey( t, u ), { apple="green", pear="green", kiwi="hairy", banana="yellow" } )
+    AssertTablesEqual( otlib.UnionByKeyI( t, u ), {} )
+    AssertTablesEqual( otlib.UnionByKey( t, u, true ), { apple="green", pear="green", kiwi="hairy", banana="yellow" } )
+end
 
-t = otlib.ParseArgs( "this \"is a\"bad way\"to make\" a sentence" )
-assert( TableEq( t, { "this", "is a", "bad", "way", "to make", "a", "sentence" } ) )
+function TestIntersection()
+    local t, u = { apple="red", pear="green", kiwi="hairy" }, { apple="green", pear="green", banana="yellow" }
+    AssertTablesEqual( otlib.IntersectionByKey( t, u ), { apple="green", pear="green" } )
+    AssertTablesEqual( otlib.IntersectionByKeyI( t, u ), {} )
+    AssertTablesEqual( otlib.IntersectionByKey( t, u, true ), { apple="green", pear="green" } )
+end
 
+function TestDifference()
+    local t, u = { apple="red", pear="green", kiwi="hairy" }, { apple="green", pear="green", banana="yellow" }
+    AssertTablesEqual( otlib.DifferenceByKey( t, u ), { kiwi="hairy" } )
+    AssertTablesEqual( otlib.DifferenceByKeyI( t, u ), {} )
+    AssertTablesEqual( otlib.DifferenceByKey( t, u, true ), { kiwi="hairy" } )
+end
 
--- Test EditDistance
-assert( otlib.EditDistance( "Tuesday", "Teusday" ) == 1 )
-assert( otlib.EditDistance( "kitten", "sitting" ) == 3 )
+function TestAppend()
+    local t, u = { "apple", "banana", "kiwi" }, { "orange", "pear" }
+    AssertTablesEqual( otlib.Append( t, u ), { "apple", "banana", "kiwi", "orange", "pear" } )
+end
 
+function TestHasValue()
+    t = { apple="red", pear="green", kiwi="hairy" }
+    a, b = otlib.HasValue( t, "green" )
+    AssertEquals( a, true )
+    AssertEquals( b, "pear" )
+    
+    a, b = otlib.HasValue( t, "blue" )
+    AssertEquals( a, false )
+    AssertEquals( b, nil )
+end
 
--- Test Count
-t = { 1, 3, "two", [{}]=4 }
-assert( otlib.Count( t ) == 4 )
-assert( otlib.Count( {} ) == 0 )
+function TestToBool()
+    AssertEquals( otlib.ToBool( false ), false )
+    AssertEquals( otlib.ToBool( true ), true )
+    AssertEquals( otlib.ToBool( 0 ), false )
+    AssertEquals( otlib.ToBool( "0.0" ), false )
+    AssertEquals( otlib.ToBool( -1 ), true )
+    AssertEquals( otlib.ToBool( "-1.0" ), true )
+    AssertEquals( otlib.ToBool( nil ), false )
+    AssertEquals( otlib.ToBool( "yes" ), true )
+    AssertEquals( otlib.ToBool( "y" ), true )
+    AssertEquals( otlib.ToBool( "t" ), true )
+    AssertEquals( otlib.ToBool( "true" ), true )
+    AssertEquals( otlib.ToBool( "n" ), false )
+    AssertEquals( otlib.ToBool( "no" ), false )
+    AssertEquals( otlib.ToBool( "false" ), false )
+    AssertEquals( otlib.ToBool( "f" ), false )
+    AssertEquals( otlib.ToBool( function() end ), true ) -- Favor true
+end
 
--- Test IsEmpty
-assert( otlib.IsEmpty( {} ) == true )
-assert( otlib.IsEmpty( { "one" } ) == false )
-assert( otlib.IsEmpty( { [{}]="apple" } ) == false )
-
--- Test Copy
-t = { [1]="hey", blah=67, mango="one" }
-assert( TableEq( t, otlib.Copy( t ) ) )
-assert( not TableEq( t, otlib.CopyI( t ) ) )
-
-t = { [1]="one", [2]="two" }
-assert( TableEq( t, otlib.Copy( t ) ) )
-assert( TableEq( t, otlib.CopyI( t ) ) )
-
--- Test Merge
-t, u = { apple="red", pear="green", kiwi="hairy" }, { apple="green", pear="green", banana="yellow",}
-assert( TableEq( otlib.Union( t, u ), { apple="green", pear="green", kiwi="hairy", banana="yellow" } ) )
-assert( TableEq( otlib.UnionI( t, u ), {} ) )
-assert( TableEq( otlib.Union( t, u, true ), { apple="green", pear="green", kiwi="hairy", banana="yellow" } ) )
-
--- Test Intersection
-t, u = { apple="red", pear="green", kiwi="hairy" }, { apple="green", pear="green", banana="yellow" }
-assert( TableEq( otlib.Intersection( t, u ), { apple="green", pear="green" } ) )
-assert( TableEq( otlib.IntersectionI( t, u ), {} ) )
-assert( TableEq( otlib.Intersection( t, u, true ), { apple="green", pear="green" } ) )
-
--- Test Difference
-t, u = { apple="red", pear="green", kiwi="hairy" }, { apple="green", pear="green", banana="yellow" }
-assert( TableEq( otlib.Difference( t, u ), { kiwi="hairy" } ) )
-assert( TableEq( otlib.DifferenceI( t, u ), {} ) )
-assert( TableEq( otlib.Difference( t, u, true ), { kiwi="hairy" } ) )
-
--- Test Append
-t, u = { "apple", "banana", "kiwi" }, { "orange", "pear" }
-assert( TableEq( otlib.Append( t, u ), { "apple", "banana", "kiwi", "orange", "pear" } ) )
-
--- Test HasValue
-t = { apple="red", pear="green", kiwi="hairy" }
-a, b = otlib.HasValue( t, "green" )
-assert( a == true and b == "pear" )
-a, b = otlib.HasValue( t, "blue" )
-assert( a == false and b == nil )
-
--- Test ToBool
-assert( otlib.ToBool( false ) == false )
-assert( otlib.ToBool( true ) == true )
-assert( otlib.ToBool( 0 ) == false )
-assert( otlib.ToBool( "0.0" ) == false )
-assert( otlib.ToBool( -1 ) == true )
-assert( otlib.ToBool( "-1.0" ) == true )
-assert( otlib.ToBool( nil ) == false )
-assert( otlib.ToBool( "yes" ) == true )
-assert( otlib.ToBool( "y" ) == true )
-assert( otlib.ToBool( "t" ) == true )
-assert( otlib.ToBool( "true" ) == true )
-assert( otlib.ToBool( "n" ) == false )
-assert( otlib.ToBool( "no" ) == false )
-assert( otlib.ToBool( "false" ) == false )
-assert( otlib.ToBool( "f" ) == false )
-assert( otlib.ToBool( function() end ) == true ) -- Favor true
+LuaUnit:run()

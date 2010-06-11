@@ -24,4 +24,14 @@ Topic: Code Conventions
     * Whenever a function name is suffixed by "I", it uses ipairs (instead of pairs) to function.
     This is because ipairs is much faster and should be used instead of pairs whenever it can be.
     For a more on this, see <A Discussion On ipairs>.
-    
+    * Whenever the term "hash table" is used, we mean a traditional lua table that can contain
+    mixed types of keys. For example, { apple="green", done=true, "bear" } is a hash table.
+    * Whenever the terms "array", "array table", "list", or "list table" are used, we mean a table
+    that is setup like an array and only contains values that are indexed by contiguous numbers. 
+    For example, { "apple", "pear", "kiwi" } is a list or array of fruit. A list may or may not
+    contain duplicate values.
+    * Whenever the term "set" is used, we mean a table that only contains values of true or nil.
+    For example, { apple=true, pear=true, kiwi=true } is a set of fruit. Sets are preferred over
+    lists whenever you're making frequent checks to see if a certain value exists, since the 
+    complexity is around O( log( #set ) ) for a check against a set and is O( #list ) for a list.
+    A set may not contain duplicate values by definition.

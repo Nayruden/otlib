@@ -126,12 +126,6 @@ end
     Returns:
 
         A *string* of str with the comments removed.
-        
-    Notes:
-    
-        * Only handles line comments, no block comments.
-        * Does not parse the document, so it will remove even from inside quotation marks if it 
-            finds line_comment inside them.
 
     Example:
 
@@ -140,6 +134,12 @@ end
         returns...
 
         :"Line 1 \n\nLine 2"
+        
+    Notes:
+
+        * Only handles line comments, no block comments.
+        * Does not parse the document, so it will remove even from inside quotation marks if it 
+            finds line_comment inside them.
 
     Revisions:
 
@@ -168,7 +168,7 @@ end
 
     Example:
 
-        :ParseArgs( "This is a \"Cool sentence to\" make \"split up\"" )
+        :ParseArgs( 'This is a "Cool sentence to" make "split up"' )
 
         returns...
 
@@ -252,7 +252,7 @@ end
     
         * Complexity is O( (#t+1) * (#s+1) ) when lim isn't specified.
         * This function can be used to compare array-like tables as easily as strings.
-        * The algorithm used is Damerau–Levenshtein distance, which calculates edit distance based
+        * The algorithm used is Damerau-Levenshtein distance, which calculates edit distance based
             off number of subsitutions, additions, deletions, and transpositions.
         * Source code for this function is based off the Wikipedia article for the algorithm
             <http://en.wikipedia.org/w/index.php?title=Damerau%E2%80%93Levenshtein_distance&oldid=351641537>.
