@@ -59,7 +59,7 @@ end
             
     Returns:
     
-        A *table or nil* specifying the parent, nil if no parent.
+        A *table* or *nil* specifying the parent, nil if no parent.
         
     Revisions:
 

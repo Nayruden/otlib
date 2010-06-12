@@ -1,5 +1,3 @@
-dofile( "tests/luaunit.lua" )
-
 module( "TestUtils", package.seeall )
 
 function TestExplode()
@@ -230,5 +228,3 @@ function TestHasValue()
     AssertEquals( a, false )
     AssertEquals( b, nil )
 end
-
-LuaUnit:run()

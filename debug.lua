@@ -50,13 +50,13 @@ end
 
         :Vardump( { "foo", apple="green", floor=41, shopping={ "milk", "cookies" } } )
 
-        returns...
+        returns the string...
 
-        :(table: array size=1, total size=4)
+        :(table: array size=1, total values=4)
         :  1 = "foo"
         :  "apple" = "green"
         :  "floor" = 41
-        :  "shopping" = (table: array size=2, total size=2)
+        :  "shopping" = (table: array size=2, total values=2)
         :    1 = "milk"
         :    2 = "cookies"
         
@@ -65,9 +65,8 @@ end
         * A string will always be surrounded by quotes and a number will always stand by itself.
             This is to make it easier to identify numbers stored as strings.
         * Array size and total size are shown in the table header. Array size is the result of the
-            pound operator (#) on the table, total size is the result of counting each value by
-            iterating over the table with pairs. Array size is useful debug information when 
-            iterating over a table with ipairs.
+            pound operator (#) on the table, total size is the result of <Count>. Array size is 
+            useful debug information when iterating over a table with ipairs.
 
     Revisions:
 

@@ -283,7 +283,7 @@ end
 function group:RegisterAlias( alias )
     if not HasValueI( self.aliases, alias ) then
         if alias_to_user[ alias ] then
-            -- return error( "tried to re-register existing alias '" .. alias .. "'" ) -- TOOD, readd
+            -- return error( "tried to re-register existing alias '" .. alias .. "'" ) -- TODO, readd
         end
         
         table.insert( self.aliases, alias )
