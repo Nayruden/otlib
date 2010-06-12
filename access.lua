@@ -17,15 +17,15 @@ InvalidCondition = object:Clone( true )
     part of the access level an access check failed on.
         
     DeniedLevel.NoAccess - The user has no access to this command at all.
-    DeniedLevel.Access - The specified arguments did not meet the requirements for the access being 
-        used.
-    DeniedLevel.User - The specified arguments met the requirements for the access being used, but 
-        not this particular user's access to the command.
+    DeniedLevel.Parameters - The specified arguments did not meet the requirements for the access
+        being used.
+    DeniedLevel.UserParameters - The specified arguments met the hard requirements for the access 
+        being used, but not this particular user's access to the command.
 ]]
 InvalidCondition.DeniedLevel = {
     NoAccess = 1,
-    Access = 2,
-    User = 3,
+    Parameters = 2,
+    UserParameters = 3,
 }
 
 
@@ -344,14 +344,14 @@ function group:CheckAccess( access, ... )
     for i, param in ipairs( access.params ) do
         local status, err = param:IsValid( self, args[ i ] )
         if not status then
-            return false, err:SetLevel( InvalidCondition.DeniedLevel.Access ):SetParameterNum( i )
+            return false, err:SetLevel( InvalidCondition.DeniedLevel.Parameters ):SetParameterNum( i )
         end
         
         -- If the permission isn't true it must be a derived permission
         if permission ~= true then
             status, err = permission.params[ i ]:IsValid( self, args[ i ] )
             if not status then
-                return false, err:SetLevel( InvalidCondition.DeniedLevel.User ):SetParameterNum( i )
+                return false, err:SetLevel( InvalidCondition.DeniedLevel.UserParameters ):SetParameterNum( i )
             end
         end
     end

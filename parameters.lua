@@ -4,7 +4,7 @@
 module( "otlib", package.seeall )
 
 BaseParam = object:Clone()
-BaseParam.optional = false
+BaseParam.optional = nil
 
 function BaseParam:Parse( str )
     error( ErrorMessages.NotImplemented, 2 )
