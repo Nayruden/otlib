@@ -144,11 +144,11 @@ function CopyI( t )
     return CopyWith( ipairs, t )
 end
 
-local function InPlaceHelper( iterator, table_a, in_place )
+local function InPlaceHelper( iterator, t, in_place )
     if in_place then
-        return table_a
+        return t
     else
-        return CopyWith( iterator, table_a )
+        return CopyWith( iterator, t )
     end
 end
 
@@ -203,6 +203,8 @@ function RemoveDuplicateValues( t, in_place )
         i = i + 1
         v = t[ i ]
     end
+    
+    return t
 end
 
 local function UnionByKeyWith( iterator, table_a, table_b, in_place )
@@ -308,16 +310,16 @@ end
         v1.00 - Initial.
 ]]
 function UnionByValue( list_a, list_b, in_place )
-    list_a = RemoveDuplicates( list_a, in_place )
+    list_a = RemoveDuplicateValues( list_a, in_place )
     
     local i = 1
     local v = list_b[ i ]
     while v ~= nil do
         if not HasValueI( list_a, v ) then
             table.insert( list_a, v )
-            i = i + 1
-            v = list_b[ i ]
         end
+        i = i + 1
+        v = list_b[ i ]
     end
     
     return list_a
@@ -438,11 +440,11 @@ function IntersectionByValue( list_a, list_b, in_place )
     local v = list_a[ i ]
     while v ~= nil do
         if HasValueI( list_b, v ) then
-            i = i + 1
-            v = list_a[ i ]
+            i = i + 1            
         else
             table.remove( list_a, i )
         end
+        v = list_a[ i ]
     end
     
     return list_a

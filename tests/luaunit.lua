@@ -2,7 +2,7 @@
 -- Changed calls to tearDown and setUp to TearDown and SetUp, respectively.
 -- Likewise changed assertError, assertEquals to AssertError and AssertEquals
 -- Changed from detecting test to test of any case
--- Added AssertTablesEqual
+-- Added AssertTablesEqual, AssertNotEquals
 -- Removed super-verbose pointless fails
 
 --[[ 
@@ -80,7 +80,30 @@ function AssertEquals(actual, expected)
 	end
 end
 
-function AssertTablesEqual(actual, expected)
+function AssertNotEquals(actual, not_expected)
+	-- assert that two values are equal and calls error else
+	if  actual == not_expected  then
+		local function wrapValue( v )
+			if type(v) == 'string' then return "'"..v.."'" end
+			return tostring(v)
+		end
+		if not USE_EXPECTED_ACTUAL_IN_ASSERT_EQUALS then
+			not_expected, actual = actual, not_expected
+		end
+
+		local errorMsg
+		if type(expected) == 'string' then
+			errorMsg = "\nnot expected: "..wrapValue(not_expected).."\n"..
+                             "actual  : "..wrapValue(actual).."\n"
+		else
+			errorMsg = "not expected: "..wrapValue(not_expected)..", actual: "..wrapValue(actual)
+		end
+		print (errorMsg)
+		error( errorMsg, 2 )
+	end
+end
+
+function AssertTablesEqual(actual, expected)    
     local equal = true
     local c1 = 0
     for k, v in pairs( actual ) do
@@ -103,7 +126,7 @@ function AssertTablesEqual(actual, expected)
         if not USE_EXPECTED_ACTUAL_IN_ASSERT_EQUALS then
 			expected, actual = actual, expected
 		end
-		local errorMsg = "----expected----\n"..otlib.Vardump( expected ).."----actual----\n"..otlib.Vardump( actual ).."----end----"
+		local errorMsg = "\n----expected----\n"..otlib.Vardump( expected ).."----actual----\n"..otlib.Vardump( actual ).."----end----"
 		print( errorMsg )
         error( errorMsg, 2 )
     end
