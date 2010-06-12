@@ -220,7 +220,7 @@ end
 
 function TestHasValue()
     t = { apple="red", pear="green", kiwi="hairy" }
-    a, b = otlib.HasValue( t, "green" )
+    local a, b = otlib.HasValue( t, "green" )
     AssertEquals( a, true )
     AssertEquals( b, "pear" )
     

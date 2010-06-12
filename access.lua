@@ -254,8 +254,6 @@ end
 ]]
 group = object:Clone()
 group.allow = object:Clone()
-groups.user = group -- Register root group by hand
-user = group -- User group is root group
 
 function group:CreateClonedGroup( name )
     local new = self:Clone()

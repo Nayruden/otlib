@@ -1,7 +1,8 @@
 module( "TestAccess", package.seeall )
 
 -- Setup a simple group ladder
-operator    = otlib.user:CreateClonedGroup( "operator" )
+user        = otlib.group:CreateClonedGroup( "user" ) -- Root group
+operator    = user:CreateClonedGroup( "operator" )
 admin       = operator:CreateClonedGroup( "admin" )
 superadmin  = admin:CreateClonedGroup( "superadmin" )
 
