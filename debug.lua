@@ -79,7 +79,7 @@ function Vardump( ... )
         str = str .. VardumpHelper( t[ i ], 0, nil, {} )
     end
     
-    return str
+    return str:sub( 1, -2 ) -- Remove last newline
 end
 
 

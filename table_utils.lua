@@ -160,7 +160,7 @@ end
 
     Parameters:
 
-        t - The *list table* to remove duplciates from.
+        list - The *list table* to remove duplciates from.
         in_place - An *optional boolean* specifying whether or not the deletions should be done in 
             place to table_a. Defaults to _false_.
 
@@ -187,24 +187,24 @@ end
 
         v1.00 - Initial.
 ]]
-function RemoveDuplicateValues( t, in_place )
-    t = InPlaceHelper( ipairs, t, in_place )
+function RemoveDuplicateValues( list, in_place )
+    list = InPlaceHelper( ipairs, list, in_place )
     
     local i = 1
-    local v = t[ i ]
+    local v = list[ i ]
     while v ~= nil do
         for j=1, i-1 do
-            if t[ j ] == v then
-                table.remove( t, i )
+            if list[ j ] == v then
+                table.remove( list, i )
                 i = i - 1 -- Since we removed it and it will be incremented below otherwise
                 break
             end
         end
         i = i + 1
-        v = t[ i ]
+        v = list[ i ]
     end
     
-    return t
+    return list
 end
 
 local function UnionByKeyWith( iterator, table_a, table_b, in_place )
@@ -288,8 +288,7 @@ end
         
     Example:
 
-        :UnionByValue( { "apple", "pear", "kiwi" },
-        :       { "pear", "apple", "banana" } )
+        :UnionByValue( { "apple", "pear", "kiwi" }, { "pear", "apple", "banana" } )
 
         returns...
 
@@ -519,9 +518,9 @@ end
 
     Parameters:
 
-        table_a - The first *list table* in the difference. If in_place is true, all operations 
+        list_a - The first *list table* in the difference. If in_place is true, all operations 
             occur on this table, if in_place is false, all operations occur on a copy of the table.
-        table_b - The second *list table* in the difference.
+        list_b - The second *list table* in the difference.
         in_place - An *optional boolean* specifying whether or not this should be an in place 
             difference operation on table_a. Defaults to _false_.
             
@@ -625,9 +624,9 @@ end
 
     Parameters:
 
-        table_a - The first *table* in the append. If in_place is true, table_b is appended to this
+        list_a - The first *list table* in the append. If in_place is true, table_b is appended to this
             table. Values in this table will not change.
-        table_b - The second *table* in the append.
+        list_b - The second *list table* in the append.
         in_place - An *optional boolean* specifying whether or not this should be an in place append to
             table_a. Defaults to _false_.
 
@@ -648,19 +647,20 @@ end
     Notes:
 
         * This function uses ipairs. See <A Discussion On ipairs>.
+        * Complexity is O( #list_b )
 
     Revisions:
 
         v1.00 - Initial.
 ]]
-function Append( table_a, table_b, in_place )
-    local table_a = InPlaceHelper( ipairs, table_a, in_place )
+function Append( list_a, list_b, in_place )
+    local list_a = InPlaceHelper( ipairs, list_a, in_place )
 
-    for i, v in ipairs( table_b ) do
-        table.insert( table_a, v )
+    for i, v in ipairs( list_b ) do
+        table.insert( list_a, v )
     end
 
-    return table_a
+    return list_a
 end
 
 local function HasValueWith( iterator, t, value )
