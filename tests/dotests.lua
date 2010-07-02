@@ -8,13 +8,16 @@ dofile( "prototype.lua" )
 dofile( "access.lua" )
 dofile( "debug.lua" )
 dofile( "parameters.lua" )
+dofile( "wrappers.lua" )
 dofile( "tests/luaunit.lua" )
+
+
 
 function DoTests()
     local tests = { "utils", "access" }
     
-    for i, test in ipairs( tests ) do
-        dofile( "tests/test_" .. test .. ".lua" )
+    for i=1, #tests do
+        dofile( "tests/test_" .. tests[ i ] .. ".lua" )
     end
     LuaUnit:run()
 end

@@ -21,9 +21,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 Topic: Code Conventions
-    * Whenever a function name is suffixed by "I", it uses ipairs (instead of pairs) to function.
-    This is because ipairs is much faster and should be used instead of pairs whenever it can be.
-    For a more on this, see <A Discussion On ipairs>.
+    * Whenever we mention "fori", we mean looping over table 't' with for i=1, #t do ... end.
+    * Whenever a function name is suffixed by "I", it uses fori (instead of pairs) to function.
+    This is because fori is much faster and should be used instead of pairs whenever it can be.
+    For a more on this, see <A Discussion On fori>.
     * Whenever the term "hash table" is used, we mean a traditional lua table that can contain
     mixed types of keys. For example, { apple="green", done=true, "bear" } is a hash table.
     * Whenever the terms "array", "array table", "list", or "list table" are used, we mean a table

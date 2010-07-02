@@ -6,24 +6,37 @@ module( "otlib", package.seeall )
 
 
 --[[
-    Topic: A Discussion On ipairs
+    Topic: A Discussion On fori
     
-    ipairs is defined in the lua documentation as... 
-    (Taken from <http://www.lua.org/manual/5.1/manual.html#pdf-ipairs>)
-    :for i,v in ipairs(t) do body end
-    :will iterate over the pairs (1,t[1]), (2,t[2]), ..., up to the first integer key absent from the table.
+    We define fori as the following type of loop where t is the table you're iterating over:
+    :for i=1, #t do body end
     
-    What isn't mentioned is that ipairs is much faster than pairs when you're iterating over a
-    table with only numeric keys. The catch is that it must be sequential numeric keys starting at
-    1. Even with this restriction, it is still very much worthwhile to use ipairs to iterate over
-    the table instead of pairs if you have a table that meets the requirements to use ipairs.
+    fori is much faster than pairs when you're iterating over a table with only numeric keys. The 
+    catch is that it must be sequential numeric keys starting at 1. Even with this restriction, it
+    is still very much worthwhile to use fori to iterate over the table instead of pairs if you 
+    have a table that meets the requirements to use fori.
     
-    Because of all this, OTLib lets you make a choice between using pairs or ipairs on anything
+    Because of all this, OTLib lets you make a choice between using pairs or fori on anything
     that would make sense to have the choice. Any function that has the same name as another
-    function but is just suffixed with the character "I" uses ipairs where the function that is not
+    function but is just suffixed with the character "I" uses fori where the function that is not
     suffixed uses pairs as its iterator. For example, <Copy> and <CopyI>. One should use <CopyI>
     instead of <Copy> whenever the table being copied is known to be a list-like table with
     sequential numeric keys starting at 1.
+    
+    A quirk with a simple fori iteration is that you might pick up "gaps" in the table where the
+    keys are not all sequential, but continues on with a later key anyways. Ideally, you shouldn't
+    be passing around data like that unless you have a really good reason, but to partially combat
+    this issue our code that uses fori on tables generally looks like the following:
+    
+    :for i=1, #t do
+    :    if t[ i ] ~= nil then
+    :        body
+    :    end
+    :end
+    
+    This prevents us from working with empty slots in the table. However, keep in mind that the way
+    Lua implements tables means that if you have gaps in your table, a fori loop might not pick up
+    all that data you want it to.
 ]]
 
 
@@ -97,15 +110,6 @@ function IsEmpty( t )
     return next( t ) == nil
 end
 
-local function CopyWith( iterator, t )
-    local c = {}
-    for k, v in iterator( t ) do
-        c[ k ] = v
-    end
-    
-    return c
-end
-
 
 --[[
     Function: Copy
@@ -130,25 +134,43 @@ end
         v1.00 - Initial.
 ]]
 function Copy( t )
-    return CopyWith( pairs, t )
+    local c = {}
+    for k, v in pairs( t ) do
+        c[ k ] = v
+    end
+    
+    return c
 end
 
 
 --[[
     Function: CopyI
 
-    Exactly the same as <Copy> except that it uses ipairs instead of pairs. In general, this means
-    that it only copies numeric keys. See <A Discussion On ipairs>.
+    Exactly the same as <Copy> except that it uses fori instead of pairs. In general, this means
+    that it only copies numeric keys. See <A Discussion On fori>.
 ]]
 function CopyI( t )
-    return CopyWith( ipairs, t )
+    local c = {}
+    for i=1, #t do
+        c[ i ] = t[ i ]
+    end
+    
+    return c
 end
 
-local function InPlaceHelper( iterator, t, in_place )
+local function InPlaceHelper( t, in_place )
     if in_place then
         return t
     else
-        return CopyWith( iterator, t )
+        return Copy( t )
+    end
+end
+
+local function InPlaceHelperI( t, in_place )
+    if in_place then
+        return t
+    else
+        return CopyI( t )
     end
 end
 
@@ -179,7 +201,7 @@ end
         
     Notes:
         
-        * This function operates over numeric indices. See <A Discussion On ipairs>.
+        * This function operates over numeric indices. See <A Discussion On fori>.
         * Complexity is around O( #t * log( #t ) ).
         * Duplicates are removed after the first value occurs. See example above.
 
@@ -188,7 +210,7 @@ end
         v1.00 - Initial.
 ]]
 function RemoveDuplicateValues( list, in_place )
-    list = InPlaceHelper( ipairs, list, in_place )
+    list = InPlaceHelperI( list, in_place )
     
     local i = 1
     local v = list[ i ]
@@ -207,21 +229,11 @@ function RemoveDuplicateValues( list, in_place )
     return list
 end
 
-local function UnionByKeyWith( iterator, table_a, table_b, in_place )
-    table_a = InPlaceHelper( iterator, table_a, in_place )
-
-    for k, v in iterator( table_b ) do
-        table_a[ k ] = v
-    end
-
-    return table_a
-end
-
 
 --[[
     Function: UnionByKey
 
-    Merges two tables by key. If both tables have values on the same key, table_b takes precedence.
+    Merges two tables by key.
 
     Parameters:
 
@@ -246,6 +258,7 @@ end
         
     Notes:
     
+        * If both tables have values on the same key, table_b takes precedence.
         * Complexity is O( Count( table_b ) ).
 
     Revisions:
@@ -253,18 +266,32 @@ end
         v1.00 - Initial.
 ]]
 function UnionByKey( table_a, table_b, in_place )
-    return UnionByKeyWith( pairs, table_a, table_b, in_place )
+    table_a = InPlaceHelper( table_a, in_place )
+
+    for k, v in pairs( table_b ) do
+        table_a[ k ] = v
+    end
+
+    return table_a
 end
 
 
 --[[
     Function: UnionByKeyI
 
-    Exactly the same as <UnionByKey> except that it uses ipairs instead of pairs. In general, this
-    means that it only merges on numeric keys. See <A Discussion On ipairs>.
+    Exactly the same as <UnionByKey> except that it uses fori instead of pairs. In general, this
+    means that it only merges on numeric keys. See <A Discussion On fori>.
 ]]
 function UnionByKeyI( table_a, table_b, in_place )
-    return UnionByKeyWith( ipairs, table_a, table_b, in_place )
+    table_a = InPlaceHelperI( table_a, in_place )
+
+    for i=1, #table_b do
+        if table_b[ i ] ~= nil then
+            table_a[ i ] = table_b[ i ]
+        end
+    end
+
+    return table_a
 end
 
 
@@ -296,7 +323,7 @@ end
         
     Notes:
 
-        * This function operates over numeric indices. See <A Discussion On ipairs>.
+        * This function operates over numeric indices. See <A Discussion On fori>.
         * The elements that in the returned table are in the same order they were in 
             table_a and then table_b. See example above.
         * This function properly handles duplicate values in either list. All values will be
@@ -324,29 +351,11 @@ function UnionByValue( list_a, list_b, in_place )
     return list_a
 end
 
-local function IntersectionByKeyWith( iterator, table_a, table_b, in_place )
-    local result
-    if not in_place then
-        result = {}
-    else
-        result = table_a
-    end
-    
-    -- Now just fill in each value with whatever the value in table_k is. This takes care of both
-    -- elimination and making table b take precedence when both tables have a value on key k.
-    for k, v in iterator( table_a ) do
-        result[ k ] = table_b[ k ]
-    end
-    
-    return result
-end
-
 
 --[[
     Function: IntersectionByKey
 
-    Gets the intersection of two tables by key. If both tables have values on the same key, table_b
-    takes precedence.
+    Gets the intersection of two tables by key.
 
     Parameters:
 
@@ -371,6 +380,7 @@ end
         
     Notes:
         
+        * If both tables have values on the same key, table_b takes precedence.
         * Complexity is O( Count( table_a ) ).
 
     Revisions:
@@ -378,18 +388,46 @@ end
         v1.00 - Initial.
 ]]
 function IntersectionByKey( table_a, table_b, in_place )
-    return IntersectionByKeyWith( pairs, table_a, table_b, in_place )
+    local result
+    if not in_place then
+        result = {}
+    else
+        result = table_a
+    end
+    
+    -- Now just fill in each value with whatever the value in table_k is. This takes care of both
+    -- elimination and making table b take precedence when both tables have a value on key k.
+    for k, v in pairs( table_a ) do
+        result[ k ] = table_b[ k ]
+    end
+    
+    return result
 end
 
 
 --[[
     Function: IntersectionByKeyI
 
-    Exactly the same as <IntersectionByKey> except that it uses ipairs instead of pairs. In 
-    general, this means that it only merges on numeric keys. See <A Discussion On ipairs>.
+    Exactly the same as <IntersectionByKey> except that it uses fori instead of pairs. In 
+    general, this means that it only merges on numeric keys. See <A Discussion On fori>.
 ]]
 function IntersectionByKeyI( table_a, table_b, in_place )
-    return IntersectionByKeyWith( ipairs, table_a, table_b, in_place )
+    local result
+    if not in_place then
+        result = {}
+    else
+        result = table_a
+    end
+    
+    -- Now just fill in each value with whatever the value in table_k is. This takes care of both
+    -- elimination and making table b take precedence when both tables have a value on key k.
+    for i=1, #table_a do
+        if table_a[ i ] ~= nil then
+            result[ i ] = table_b[ i ]
+        end
+    end
+    
+    return result
 end
 
 
@@ -420,7 +458,7 @@ end
         
     Notes:
 
-        * This function operates over numeric indices. See <A Discussion On ipairs>.
+        * This function operates over numeric indices. See <A Discussion On fori>.
         * The elements that are left in the returned table are in the same order they were in 
             table_a. See example above.
         * This function properly handles duplicate values in either list. All values will be
@@ -447,16 +485,6 @@ function IntersectionByValue( list_a, list_b, in_place )
     end
     
     return list_a
-end
-
-local function DifferenceByKeyWith( iterator, table_a, table_b, in_place )
-    table_a = InPlaceHelper( iterator, table_a, in_place )
-    
-    for k, v in iterator( table_b ) do
-        table_a[ k ] = nil
-    end
-    
-    return table_a
 end
 
 
@@ -496,18 +524,32 @@ end
         v1.00 - Initial.
 ]]
 function DifferenceByKey( table_a, table_b, in_place )
-    return DifferenceByKeyWith( pairs, table_a, table_b, in_place )
+    table_a = InPlaceHelper( table_a, in_place )
+    
+    for k, v in pairs( table_b ) do
+        table_a[ k ] = nil
+    end
+    
+    return table_a
 end
 
 
 --[[
     Function: DifferenceByKeyI
 
-    Exactly the same as <DifferenceByKey> except that it uses ipairs instead of pairs. In general,
-    this means that it only performs the difference on numeric keys. See <A Discussion On ipairs>.
+    Exactly the same as <DifferenceByKey> except that it uses fori instead of pairs. In general,
+    this means that it only performs the difference on numeric keys. See <A Discussion On fori>.
 ]]
 function DifferenceByKeyI( table_a, table_b, in_place )
-    return DifferenceByKeyWith( ipairs, table_a, table_b, in_place )
+    table_a = InPlaceHelperI( table_a, in_place )
+    
+    for i=1, #table_b do
+        if table_b[ i ] ~= nil then
+            table_a[ i ] = nil
+        end
+    end
+    
+    return table_a
 end
 
 
@@ -539,7 +581,7 @@ end
         
     Notes:
 
-        * This function operates over numeric indices. See <A Discussion On ipairs>.
+        * This function operates over numeric indices. See <A Discussion On fori>.
         * The elements that are left in the returned table are in the same order they were in 
             table_a. See example above.
         * This function properly handles duplicate values in either list. All values will be
@@ -552,7 +594,7 @@ end
         v1.00 - Initial.
 ]]
 function DifferenceByValue( list_a, list_b, in_place )
-    list_a = InPlaceHelper( ipairs, list_a, in_place )
+    list_a = InPlaceHelper( list_a, in_place )
     
     local i = 1
     local v = list_b[ i ]
@@ -599,7 +641,7 @@ end
         
     Notes:
 
-        * This function uses ipairs during the conversion process. See <A Discussion On ipairs>.
+        * This function uses fori during the conversion process. See <A Discussion On fori>.
         * Complexity is O( #list )
         
     Revisions:
@@ -609,8 +651,10 @@ end
 function SetFromList( list )
     local result = {}
     
-    for i, v in ipairs( list ) do
-        result[ v ] = true
+    for i=1, #list do
+        if list[ i ] ~= nil then
+            result[ list[ i ] ] = true
+        end
     end
     
     return result
@@ -646,7 +690,7 @@ end
         
     Notes:
 
-        * This function uses ipairs. See <A Discussion On ipairs>.
+        * This function uses fori. See <A Discussion On fori>.
         * Complexity is O( #list_b )
 
     Revisions:
@@ -654,23 +698,15 @@ end
         v1.00 - Initial.
 ]]
 function Append( list_a, list_b, in_place )
-    local list_a = InPlaceHelper( ipairs, list_a, in_place )
+    local list_a = InPlaceHelper( list_a, in_place )
 
-    for i, v in ipairs( list_b ) do
-        table.insert( list_a, v )
+    for i=1, #list_b do
+        if list_b[ i ] ~= nil then
+            table.insert( list_a, list_b[ i ] )
+        end
     end
 
     return list_a
-end
-
-local function HasValueWith( iterator, t, value )
-    for k, v in iterator( t ) do
-        if v == value then
-            return true, k
-        end
-    end
-    
-    return false, nil
 end
 
 
@@ -703,16 +739,28 @@ end
         v1.00 - Initial.
 ]]
 function HasValue( t, value )
-    return HasValueWith( pairs, t, value )
+    for k, v in pairs( t ) do
+        if v == value then
+            return true, k
+        end
+    end
+    
+    return false, nil
 end
 
 
 --[[
     Function: HasValueI
 
-    Exactly the same as <HasValue> except that it uses ipairs instead of pairs. In general, 
-    this means that it only merges on numeric keys. See <A Discussion On ipairs>.
+    Exactly the same as <HasValue> except that it uses fori instead of pairs. In general, 
+    this means that it only merges on numeric keys. See <A Discussion On fori>.
 ]]
 function HasValueI( t, value )
-    return HasValueWith( ipairs, t, value )
+    for i=1, #t do
+        if t[ i ] == value then
+            return true, i
+        end
+    end
+    
+    return false, nil
 end

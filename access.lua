@@ -209,8 +209,9 @@ function access:Register( tag, ... )
     new.params = {}
     
     --if not registered_tags[ tag ] then
-        for i, group in ipairs( { ... } ) do
-            group.allow[ new ] = true
+        local groups = { ... }
+        for i=1, #argv do
+            groups[ i ].allow[ new ] = true
         end
     --end
     
@@ -271,8 +272,9 @@ function group:CreateClonedUser( ... )
     local new = self:Clone()
     new.allow = self.allow:Clone()
     new.aliases = {}
-    for i, v in ipairs( { ... } ) do
-        new:RegisterAlias( v )
+    local aliases = { ... }
+    for i=1, #aliases do
+        new:RegisterAlias( aliases[ i ] )
     end
     
     return new
@@ -339,8 +341,8 @@ function group:CheckAccess( access, ... )
     end
     
     local args = { ... }
-    for i, param in ipairs( access.params ) do
-        local status, err = param:IsValid( self, args[ i ] )
+    for i=1, #access.params do
+        local status, err = access.params[ i ]:IsValid( self, args[ i ] )
         if not status then
             return false, err:SetLevel( InvalidCondition.DeniedLevel.Parameters ):SetParameterNum( i )
         end
