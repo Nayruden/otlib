@@ -112,6 +112,34 @@ end
 
 
 --[[
+    Function: Empty
+    
+    Removes all data from a table.
+    
+    Parameters:
+        
+        t - The *table* to empty.
+        
+    Returns:
+    
+        The *table* t.
+        
+    Notes:
+        
+        * Complexity is O( Count( t ) ).
+        
+    Revisions:
+
+        v1.00 - Initial.
+]]
+function Empty( t )
+    for k, v in pairs( t ) do
+        t[ k ] = nil
+    end
+end
+
+
+--[[
     Function: Copy
 
     Make a shallow copy of a table. A shallow copy means that any subtables will still refer to the
@@ -614,54 +642,6 @@ end
 
 
 --[[
-    Function: SetFromList
-    
-    Creates a set from a list. A list is defined as a table with all numeric keys in sequential
-    order (such as {"red", "yellow", "green"}). A set is defined as a table that only uses the
-    boolean value true for keys that exist in the table. This function takes the values from the
-    list and makes them the keys in a set, all with the value of 'true'. Note that you lose
-    ordering and duplicates in the list during this conversion, but gain ease of testing for a 
-    value's existence in the table (test whether the value of a key is true or nil).
-    
-    Parameters:
-    
-        list - The *table* representing the list.
-        
-    Returns:
-    
-        The *table* representing the set.
-        
-    Example:
-
-        :SetFromList( { "apple", "banana", "kiwi", "pear" } )
-
-        returns...
-
-        :{ apple=true, banana=true, kiwi=true, pear=true }
-        
-    Notes:
-
-        * This function uses fori during the conversion process. See <A Discussion On fori>.
-        * Complexity is O( #list )
-        
-    Revisions:
-
-        v1.00 - Initial.
-]]
-function SetFromList( list )
-    local result = {}
-    
-    for i=1, #list do
-        if list[ i ] ~= nil then
-            result[ list[ i ] ] = true
-        end
-    end
-    
-    return result
-end
-
-
---[[
     Function: Append
 
     Appends values with numeric keys from one table to another.
@@ -763,4 +743,299 @@ function HasValueI( t, value )
     end
     
     return false, nil
+end
+
+
+--- Group: Table Conversion Untilities
+--- Convert tables between one thing and another!
+
+--[[
+    Function: SetFromList
+    
+    Creates a set from a list. A list is defined as a table with all numeric keys in sequential
+    order (such as {"red", "yellow", "green"}). A set is defined as a table that only uses the
+    boolean value true for keys that exist in the table. This function takes the values from the
+    list and makes them the keys in a set, all with the value of 'true'. Note that you lose
+    ordering and duplicates in the list during this conversion, but gain ease of testing for a 
+    value's existence in the table (test whether the value of a key is true or nil).
+    
+    Parameters:
+    
+        list - The *table* representing the list.
+        
+    Returns:
+    
+        The *table* representing the set.
+        
+    Example:
+
+        :SetFromList( { "apple", "banana", "kiwi", "pear" } )
+
+        returns...
+
+        :{ apple=true, banana=true, kiwi=true, pear=true }
+        
+    Notes:
+
+        * This function uses fori during the conversion process. See <A Discussion On fori>.
+        * Complexity is O( #list )
+        
+    Revisions:
+
+        v1.00 - Initial.
+]]
+function SetFromList( list )
+    local result = {}
+    
+    for i=1, #list do
+        if list[ i ] ~= nil then
+            result[ list[ i ] ] = true
+        end
+    end
+    
+    return result
+end
+
+local function MakeKeyValuesHelper( t, depth, completed )
+    if completed[ t ] then
+        return error( "cyclical table passed to MakeKeyValues", depth+2 )
+    end
+    completed[ t ] = true
+    
+    local lines = {}
+    local postfix_lines = {}
+    local appends = {}
+    local tab = string.rep( "\t", depth )
+    
+    for k, v in pairs( t ) do
+        local serialized
+        local k_typ = type( k )
+        local v_typ = type( v )
+        
+        -- Form the value first...
+        if v_typ == "table" then
+            if k_typ == "number" then
+                error( "tables are not allowed to be indexed by a number (creates an ambiguity in the grammar otherwise)", depth+2 )
+            end
+            
+            -- We pass in a *copy* of completed so we find only cycles, not joins
+            serialized = string.format( "{\n%s\n%s}", MakeKeyValuesHelper( v, depth+1, Copy( completed ) ), tab )
+        elseif v_typ == "string" then
+            serialized = ("%q"):format( v )
+        elseif v_typ == "number" or v_type == "boolean" then
+            serialized = tostring( v )
+        else
+            return error( "unknown value type '" .. v_typ .. "' passed to MakeKeyValues", depth+2 )
+        end
+        
+        if k_typ == "string" then
+            local sep = "  "
+            if v_typ == "table" then
+                sep = "\n" .. tab
+            end
+            table.insert( lines, ("%s%q%s%s"):format( tab, tostring( k ), sep, serialized ) )
+        elseif k_typ == "number" then
+            appends[ k ] = serialized
+        else
+            return error( "unknown key type '" .. k_typ .. "' passed to MakeKeyValues", depth+2 )
+        end
+    end
+    
+    -- The following code is dedicated to determining what the list part is and what isn't
+    local appends_count = Count( appends )    
+    if appends_count > 0 then
+        local last_append = 0 
+        for i=1, appends_count do
+            if appends[ i ] ~= nil then
+                table.insert( postfix_lines, tab .. appends[ i ] )
+                last_append = i
+            else
+                break
+            end
+        end
+        
+        for i, v in pairs( appends ) do
+            if i > last_append then
+                local sep = "  "
+                if v:find( "^%s{" ) then
+                    sep = "\n" .. tab
+                end
+                table.insert( lines, ("%s%i%s%s"):format( tab, i, sep, v ) )
+            end
+        end
+    end
+    
+    local str = table.concat( lines, "\n" )
+    if #lines > 0 and #postfix_lines > 0 then
+        str = str .. "\n"
+    end
+    str = str .. table.concat( postfix_lines, "\n" )
+    
+    return str
+end
+
+
+--[[
+    Function: MakeKeyValues
+
+    Makes a key values string from a table.
+
+    Parameters:
+
+        t - The *table* to make the key values from. The table's keys and subkeys may be of string
+            or number type. The table's values and subvalues may be of string, number, boolean, or
+            table types. Do not pass in a cyclical table or this function will error.
+
+    Returns:
+
+        The key values *string*.
+
+    Example:
+    
+    :{ 3.14, "foo", bar = { pear = "green", t = { none = 0 } } }
+
+    returns...
+    
+    :"bar"
+    :{
+    :        "t"
+    :        {
+    :                "none"  0
+    :        }
+    :        "pear"  "green"
+    :}
+    :3.14
+    :"foo"
+    
+    Notes:
+    
+        * This function attempts to simplify list-like tables by not including the key on coherent
+            lists. The key in a list is implied by the order the value comes in.
+        * The list portion of a table will always be output after the hash portion of a table.
+        * Although cyclical tables can't be used in this function, tables with joins can. The joins
+            will be copied and treated as separate but identical tables when deserialized.
+        * Subtables are not allowed to be indexed by a number. This restriction is to avoid
+            creating an ambiguity in the grammar.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
+function MakeKeyValues( t )
+    return MakeKeyValuesHelper( t, 0, {} )
+end
+
+-- This is a specialized version of ParseArgs. It can handle escaped quotes, but is probably a lot slower.
+local function readArgs( line )
+    local argv = {}
+    local in_quote = false
+    local ignore = false
+    local accumulator = {}
+    for i=1, #line do
+        local char = line:sub( i, i )
+        if ignore then
+            ignore = false
+        elseif char == '"' then
+            table.insert( accumulator, char )
+            in_quote = not in_quote
+        elseif char == '\\' then
+            table.insert( accumulator, line:sub( i+1, i+1 ) )
+            ignore = true
+        elseif char == ' ' and not in_quote then
+            if #accumulator > 0 then
+                table.insert( argv, table.concat( accumulator ) )
+                accumulator = {}
+            end
+        else
+            table.insert( accumulator, char )
+        end
+    end
+    if #accumulator > 0 then table.insert( argv, table.concat( accumulator ) ) end
+    
+    return argv
+end
+
+-- Unserialize a single non-table data
+local function unserializeData( str )
+    if str:sub( 1, 1 ) == '"' and str:sub( -1, -1 ) == '"' then
+        return str:sub( 2, -2 )
+    elseif tonumber( str ) then
+        return tonumber( str )
+    elseif str == 'false' then
+        return false
+    elseif str == 'true' then
+        return true
+    else
+        return nil
+    end
+end
+
+
+--[[
+	Function: ParseKeyValues
+
+	Parses a key value formatted string into a table. See <MakeKeyValues> for creating a key value string.
+
+	Parameters:
+
+		str - The *string* to parse.
+
+	Returns:
+
+		1 - The *table* on success or *nil* on failure.
+		2 - *Nil* on success, or the *string* explaining the error on failure.
+
+	Revisions:
+
+		v1.00 - Initial.
+]]
+function ParseKeyValues( str )
+    local lines = Explode( str, "\n", true )
+    
+    local current = {}
+    local parent_stack = {}
+    
+    for i=1, #lines do
+        local line = Trim( lines[ i ] )
+        if line ~= '' then
+            local argv = readArgs( line )
+            local key, value = argv[ 1 ], argv[ 2 ]
+            if key == '{' then
+                if #current == 0 then
+                    return nil, "table without a key on line " .. i
+                end
+                
+                local new = {}
+                current[ table.remove( current ) ] = new
+                table.insert( parent_stack, current )
+                current = new
+            elseif key == '}' then
+                if #parent_stack == 0 then
+                    return nil, "closing brace without matching opening brace on line " .. i
+                end
+                
+                current = table.remove( parent_stack )
+            else
+                key = unserializeData( key )
+                if key == nil then
+                    return nil, "couldn't parse data on line " .. i
+                end
+                
+                if not value then
+                    table.insert( current, key )
+                else
+                    value = unserializeData( value )
+                    if value == nil then
+                        return nil, "couldn't parse data on line " .. i
+                    end
+                    current[ key ] = value
+                end
+            end
+        end
+    end
+    
+    if #parent_stack ~= 0 then
+        return nil, "there are more opening braces than closing braces"
+    end
+    return current
 end

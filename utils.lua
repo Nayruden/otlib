@@ -192,7 +192,7 @@ function ParseArgs( args )
     local args_len = args:len()
 
     while curpos <= args_len or in_quote do
-        local quotepos = args:find( "\"", curpos, true )
+        local quotepos = args:find( '"', curpos, true )
 
         -- The string up to the quote, the whole string if no quote was found
         local prefix = args:sub( curpos, (quotepos or 0) - 1 )
@@ -465,4 +465,18 @@ end
 function StoredExpression()
     local self = { __call = call }
     return setmetatable( self, self )
+end
+
+
+--[[
+    Function: DataEqualsAnyOf
+    -- TODO
+]]
+function DataEqualsAnyOf( data, ... )
+    local argv = { ... }
+    for i=1, select( "#", ... ) do
+        if data == argv[ i ] then return true end
+    end
+    
+    return false
 end
