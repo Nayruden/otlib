@@ -210,7 +210,7 @@ function access:Register( tag, ... )
     
     --if not registered_tags[ tag ] then
         local groups = { ... }
-        for i=1, #argv do
+        for i=1, #groups do
             groups[ i ].allow[ new ] = true
         end
     --end
