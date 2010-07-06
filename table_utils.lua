@@ -136,6 +136,8 @@ function Empty( t )
     for k, v in pairs( t ) do
         t[ k ] = nil
     end
+    
+    return t
 end
 
 

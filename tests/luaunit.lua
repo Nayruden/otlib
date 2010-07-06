@@ -103,30 +103,36 @@ function AssertNotEquals(actual, not_expected)
 	end
 end
 
-function AssertTablesEqual(actual, expected)    
-    local equal = true
+local function tablesEqualHelper(t1, t2)
     local c1 = 0
-    for k, v in pairs( actual ) do
+    for k, v in pairs(t1) do
         c1 = c1 + 1
-        if actual[ k ] ~= expected[ k ] then
-            equal = false
-            break
+        if type( t1[ k ] ) ~= "table" or type( t2[ k ] ) ~= "table" then
+            if t1[ k ] ~= t2[ k ] then
+                return false
+            end
+        else
+            if not tablesEqualHelper( t1[ k ], t2[ k ] ) then 
+                return false
+            end
         end
     end
     
-    if equal then
-        for k, v in pairs( expected ) do
-            c1 = c1 - 1
-        end
+    for k, v in pairs(t2) do
+        c1 = c1 - 1
     end
     
-    if c1 ~= 0 then equal = false end
+    if c1 ~= 0 then return false end
     
-    if not equal then
+    return true
+end
+
+function AssertTablesEqual(actual, expected)    
+    if not tablesEqualHelper(actual, expected) then
         if not USE_EXPECTED_ACTUAL_IN_ASSERT_EQUALS then
 			expected, actual = actual, expected
 		end
-		local errorMsg = "\n----expected----\n"..otlib.Vardump( expected ).."----actual----\n"..otlib.Vardump( actual ).."----end----"
+		local errorMsg = "\n----expected----\n"..otlib.Vardump( expected ).."\n----actual----\n"..otlib.Vardump( actual ).."\n----end----"
 		print( errorMsg )
         error( errorMsg, 2 )
     end

@@ -112,6 +112,12 @@ function TestIsEmpty()
     AssertEquals( otlib.IsEmpty( { [{}]="apple" } ), false )
 end
 
+function TestEmpty()
+    local t = { foo="bar", 3.1415 }
+    AssertEquals( otlib.Empty( t ), t ) -- Assert returns self
+    AssertTablesEqual( t, {} )
+end
+
 function TestCopy()
     local t = { [1]="hey", blah=67, mango="one" }
     AssertTablesEqual( otlib.Copy( t ), t )
@@ -209,10 +215,6 @@ function TestDifference()
     InPlaceTester( desired, otlib.DifferenceByValue, t, u )
 end
 
-function TestSetFromList()
-    AssertTablesEqual( otlib.SetFromList( { "apple", "banana", "kiwi", "pear" } ), { apple=true, banana=true, kiwi=true, pear=true } )
-end
-
 function TestAppend()
     local t, u = { "apple", "banana", "kiwi" }, { "orange", "pear" }
     AssertTablesEqual( otlib.Append( t, u ), { "apple", "banana", "kiwi", "orange", "pear" } )
@@ -227,4 +229,26 @@ function TestHasValue()
     a, b = otlib.HasValue( t, "blue" )
     AssertEquals( a, false )
     AssertEquals( b, nil )
+end
+
+function TestSetFromList()
+    AssertTablesEqual( otlib.SetFromList( { "apple", "banana", "kiwi", "pear" } ), { apple=true, banana=true, kiwi=true, pear=true } )
+end
+
+function TestKeyValues()
+    local table = {
+        3.14, 
+        "foo", 
+        bar = { 
+            pear = "green", 
+            t = { 
+                none = 0,
+                41
+            } 
+        }
+    }
+    local string = '"bar"\n{\n\t"t"\n\t{\n\t\t"none"  0\n\t\t41\n\t}\n\t"pear"  "green"\n}\n3.14\n"foo"'
+    
+    AssertEquals( otlib.MakeKeyValues( table ), string )
+    AssertTablesEqual( otlib.ParseKeyValues( string ), table )
 end
