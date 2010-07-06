@@ -13,6 +13,12 @@ function TestTrim()
     AssertEquals( otlib.Trim( "test\t" ), "test" )
     AssertEquals( otlib.Trim( "abcd" ), "abcd" )
     AssertEquals( otlib.Trim( "" ), "" )
+    
+    AssertEquals( otlib.LTrim( " \ttest" ), "test" )
+    AssertEquals( otlib.LTrim( "test " ), "test " )
+    
+    AssertEquals( otlib.RTrim( "test \t" ), "test" )
+    AssertEquals( otlib.RTrim( " test" ), " test" )
 end
 
 function TestStripComments()
@@ -62,6 +68,16 @@ end
 function TestEditDistance()
     AssertEquals( otlib.EditDistance( "Tuesday", "Teusday" ), 1 )
     AssertEquals( otlib.EditDistance( "kitten", "sitting" ), 3 )
+end
+
+function TestSplitCommentHeader()
+    local comment, not_comment = otlib.SplitCommentHeader( ";Comment 1\n;Comment 2\nData 1\nData 2" )
+    AssertEquals( comment, ";Comment 1\n;Comment 2" )
+    AssertEquals( not_comment, "Data 1\nData 2" )
+    
+    local comment, not_comment = otlib.SplitCommentHeader( "//Comment 1\n//Comment 2\n//\nData 1\nData 2", "//" )
+    AssertEquals( comment, "//Comment 1\n//Comment 2\n//" )
+    AssertEquals( not_comment, "Data 1\nData 2" )
 end
 
 function TestRound()

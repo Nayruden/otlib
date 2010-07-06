@@ -88,7 +88,41 @@ end
         v1.00 - Initial.
 ]]
 function Trim( str )
-    return str:match( '^()%s*$' ) and '' or str:match( '^%s*(.*%S)' )
+    return str:match( "^()%s*$" ) and '' or str:match( "^%s*(.*%S)" )
+end
+
+
+--[[
+    Function: LTrim
+    
+    Exactly like <Trim> except it only trims the left side. Taken from 
+    <http://lua-users.org/wiki/CommonFunctions>
+    
+    Revisions:
+    
+        v1.00 - Initial.
+]]
+function LTrim( str )
+    return (str:gsub( "^%s*", '' ))
+end
+
+
+--[[
+    Function: RTrim
+    
+    Exactly like <Trim> except it only trims the right side. Taken from 
+    <http://lua-users.org/wiki/CommonFunctions>
+    
+    Revisions:
+    
+        v1.00 - Initial.
+]]
+function RTrim( str )
+    local n = #str
+    while n > 0 and str:find( "^%s", n ) do 
+        n = n - 1
+    end
+    return str:sub( 1, n )
 end
 
 
@@ -329,6 +363,56 @@ function EditDistance( s, t, lim )
     end
     
     return d[ #d ]
+end
+
+
+--[[
+    Function: SplitCommentHeader
+    
+    Splits a comment header in a string. A comment header is defined as a block in a string where
+    every non-blank line starts with a certain prefix, until a non-blank line is reached that
+    doesn't start with the prefix.
+    
+    Parameters:
+    
+        str - The *string* to split the comment from.
+        comment_prefix - The *optional string* comment prefix. Defaults to _";"_.
+        
+    Returns:
+    
+        1 - The comment header.
+        2 - Everything after the comment header.
+        
+    Example:
+
+        :SplitCommentHeader( ";Comment 1\n;Comment 2\nData 1\nData 2" )
+
+        returns...
+
+        :";Comment 1\n;Comment 2", "Data 1\nData2"
+        
+    Revisions:
+
+        v1.00 - Initial.
+]]
+function SplitCommentHeader( str, comment_prefix )
+    comment_prefix = comment_prefix or ";"
+    comment_prefix_length = comment_prefix:len()
+    local lines = Explode( str, "\n", true )
+    local end_comment_line = 0
+    -- for _, line in ipairs( lines ) do
+    for i=1, #lines do
+        local trimmed = Trim( lines[ i ] )
+        if trimmed == "" or trimmed:sub( 1, comment_prefix_length ) == comment_prefix then
+            end_comment_line = end_comment_line + 1
+        else
+            break
+        end
+    end
+    
+    local comment = RTrim( table.concat( lines, "\n", 1, end_comment_line ) )
+    local not_comment = LTrim( table.concat( lines, "\n", end_comment_line + 1 ) )
+    return comment, not_comment
 end
 
 
