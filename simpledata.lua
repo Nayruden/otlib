@@ -2,19 +2,22 @@
     File: Simple Data
     
     Offers a wrapper around file or database I/O for _simple_ data needs. You'll be able to access
-    the data without caring what the backend is (SQL or flat-file), but each row in the database
-    will need to have a unique key and only four operations are supported on the data. The four
-    operations are fetch all rows, retrieve row by key, delete row by key, and update row (which 
-    will happen automatically unless you turn that off). In other words, there's no searching on
-    anything other than the unique key unless you're willing to grab all the data and search
-    yourself.
+    the data without caring what the backend is (SQL or flat-file), but each row in the table will
+    need to have an unique, primary key and only four operations are supported on the data. The 
+    four operations are fetch all rows (<otlib.DataTable.GetAll>), retrieve row by key 
+    (<otlib.DataTable.Fetch), delete row by key (<otlib.DataTable.Remove), and update row (which
+    will happen automatically unless you're doing transactions). In other words, there's no 
+    searching on anything other than the unique, primary key unless you're willing to grab all the
+    data (<otlib.DataTable.GetAll>) and search yourself (but that would be extremely slow).
     
     Major features:
     
         * Save to flat-file, SQLite, or MySQL.
         * Convert between formats on the fly.
-        * Can flush any caches on the fly without developers having to re-request the data.
-        * Automatically saves changes.
+        * Caching of retrieved data.
+        * Can flush the cache on the fly, or disable the caching entirely.
+        * Automatically and instantly saves changes.
+        * Can do transactions. This means several changes are pushed at once.
 ]]
 
 -- Temp
@@ -26,37 +29,67 @@ dofile( "access.lua" )
 dofile( "debug.lua" )
 dofile( "parameters.lua" )
 dofile( "wrappers.lua" )
-package.cpath = package.cpath .. ";/Users/zoot/.luarocks/lib/lua/5.1/?.so"
-require( "luasql.sqlite3" )
-require( "luasql.mysql" )
--- sqlite3 = assert( luasql.sqlite3() )
--- conn = assert( sqlite3:connect( "test.db" ) )
-mysql = assert( luasql.mysql() )
-conn = assert( mysql:connect( "test" ) )
-
--- I make no promises that this properly escapes data, it's only for testing.
-function otlib.wrappers.FormatAndEscapeData( data )
-    if type( data ) == "string" then
-        data = string.format( '"%s"', data:gsub( '"', '""' ) )
-    elseif type( data ) == "nil" then
-        data = "NULL"
-    end
-    
-    return data
-end
 
 -- TODO: Document and copy wrappers over...
-function otlib.wrappers.BeginTransaction()
-    conn:setautocommit( false )
+-- I make no promises that this properly escapes data, it's only for testing.
+function otlib.wrappers.FormatAndEscapeData( data )
+    local data_typ = type( data )
+    if data_typ == "string" then
+        return string.format( '"%s"', data:gsub( '"', '""' ) )
+    elseif data_typ == "nil" then
+        return "NULL"
+    else
+        return error( "don't know how to escape data type '" .. data_typ .. "'", 2 )
+    end
 end
 
-function otlib.wrappers.EndTransaction()
+local affected_count = 0
+local sqlite3_env
+local mysql_env
+local sqlite3_conn
+local mysql_conn
+local function getConnection( database_type )
+    -- TODO remove the otlib after move
+    if database_type == otlib.DatabaseTypes.MySQL then
+        if not mysql_conn then
+            if mysql_env then
+                mysql_env:close()
+            else
+                require( "luasql.mysql" )
+            end
+            mysql_env = assert( luasql.mysql() )
+            mysql_conn = assert( mysql_env:connect( "simpledata", "root" ) )
+        end
+        return mysql_conn
+    elseif database_type == otlib.DatabaseTypes.SQLite then
+        if not sqlite3_conn then
+            if sqlite3_env then
+                sqlite3_env:close()
+            else          
+                require( "luasql.sqlite3" )
+            end
+            sqlite3_env = assert( luasql.sqlite3() )
+            sqlite3_conn = assert( sqlite3_env:connect( "simpledata.db" ) )
+        end
+        return sqlite3_conn
+    else
+        return error( ("unknown database type '%s'"):format( tostring( database_type ) ) )
+    end
+end
+
+function otlib.wrappers.BeginTransaction( database_type )
+    getConnection( database_type ):setautocommit( false )
+end
+
+function otlib.wrappers.EndTransaction( database_type )
+    local conn = getConnection( database_type )
     conn:commit()
     conn:setautocommit( true )
 end
 
-local affected_count = 0
 function otlib.wrappers.Execute( database_type, statement )
+    local conn = getConnection( database_type )
+    
     if type( statement ) ~= "string" then error( "Not a string!", 2 ) end
     print( statement .. ";" )
     local ret = assert( conn:execute( statement ) )
@@ -70,6 +103,7 @@ function otlib.wrappers.Execute( database_type, statement )
             table.insert( tbl, row )
             row = ret:fetch( {}, "a" )
         end
+        ret:close()
         return tbl
     end
 end
@@ -101,6 +135,12 @@ function otlib.wrappers.FileWrite( file_name, data )
     assert( f )
     f:write( data )
     io.close( f )
+end
+
+function otlib.wrappers.FileDelete( file_name )
+    if otlib.wrappers.FileExists( file_name ) then 
+        io.popen( "rm " .. file_name )
+    end
 end
 -- End temp
 
@@ -162,7 +202,7 @@ function DataTable:AddKey( key_name, value_type, comment )
     return self
 end
 
-function DataTable:AddKeyValueList( list_name, key_type, value_type, comment )
+function DataTable:AddListOfKeyValues( list_name, key_type, value_type, comment )
     self.lists[ list_name ] = {
         list_table_name = self.table_name .. "_" .. list_name, -- Only relevant for SQL
         key_type = NormalizeType( key_type ),
@@ -171,9 +211,21 @@ function DataTable:AddKeyValueList( list_name, key_type, value_type, comment )
     }
 end
 
+local function readFlatfile( datatable )
+    local data = wrappers.FileRead( datatable.table_name .. ".txt" )
+    local comment, data = SplitCommentHeader( data )
+    datatable.file_header = comment
+    
+    -- We parse this and then convert back to keyvalues to ensure that it's in a standardized format (and valid).
+    local parsed, err = ParseKeyValues( data )
+    if not parsed then
+        error( "could not read database, possible corruption. error is: " .. err )
+    end
+    datatable.file_cache = MakeKeyValues( parsed )
+end
+
 local function saveFlatfile( datatable )
     if not datatable.in_transaction then
-        print( "writing!" )
         wrappers.FileWrite( datatable.table_name .. ".txt", datatable.file_header .. "\n" .. datatable.file_cache .. "\n" )
     end
 end
@@ -191,7 +243,7 @@ local function insertOrReplaceIntoFlatfile( datatable, data )
     if start then
         datatable.file_cache = datatable.file_cache:sub( 1, start-1 ) .. keyvalues .. datatable.file_cache:sub( stop+1 )
     else
-        datatable.file_cache = datatable.file_cache .. (datatable.file_cache ~= '' and "\n" or '') .. keyvalues
+        datatable.file_cache = datatable.file_cache .. (datatable.file_cache ~= "" and "\n" or "") .. keyvalues
     end
 
     saveFlatfile( datatable )
@@ -201,7 +253,7 @@ function DataTable:BeginTransaction()
     self.in_transaction = true
     
     if DataEqualsAnyOf( self.database_type, DatabaseTypes.SQLite, DatabaseTypes.MySQL ) then
-        wrappers.BeginTransaction()
+        wrappers.BeginTransaction( self.database_type )
 
     elseif self.database_type == DatabaseTypes.Flatfile then
         -- Do nothing
@@ -215,7 +267,7 @@ function DataTable:EndTransaction()
     self.in_transaction = nil
     
     if DataEqualsAnyOf( self.database_type, DatabaseTypes.SQLite, DatabaseTypes.MySQL ) then
-        wrappers.EndTransaction()
+        wrappers.EndTransaction( self.database_type )
 
     elseif self.database_type == DatabaseTypes.Flatfile then
         saveFlatfile( self )
@@ -225,51 +277,69 @@ function DataTable:EndTransaction()
     end
 end
 
-function DataTable:CreateTableIfNeeded()
-    if self.created then return end
-    self.created = true
+function DataTable:ClearCache()
+    if self.database_type == DatabaseTypes.Flatfile then
+        readFlatfile( self )
+    end
     
-    if DataEqualsAnyOf( self.database_type, DatabaseTypes.SQLite, DatabaseTypes.MySQL ) then
+    datatable_cache[ self.table_name ] = {}
+end
+
+-- Doc special case: flatfiles
+function DataTable:DisableCache()
+    self:ClearCache()
+    self.no_caching = true
+end
+
+function DataTable:EnableCache()
+    self.no_caching = nil
+end
+
+function createTableIfNeeded( datatable )
+    if datatable.created then return end
+    datatable.created = true
+    
+    if DataEqualsAnyOf( datatable.database_type, DatabaseTypes.SQLite, DatabaseTypes.MySQL ) then
         local statement_template = "CREATE TABLE IF NOT EXISTS `%s` (%s)"
         local comment_template = " COMMENT '%s'"
         local column_template = "`%s` %s"
     
         -- Normally primary key implies not null, but sqlite3 doesn't follow the standard, so we explicitly state it
-        local column_definitions = { column_template:format( self.primary_key_name, self.primary_key_type ) .. " PRIMARY KEY NOT NULL" } -- Prepopulate with primary key column definition
-        for key_name, key_data in pairs( self.keys ) do
+        local column_definitions = { column_template:format( datatable.primary_key_name, datatable.primary_key_type ) .. " PRIMARY KEY NOT NULL" } -- Prepopulate with primary key column definition
+        for key_name, key_data in pairs( datatable.keys ) do
             table.insert( column_definitions, column_template:format( key_name, key_data.value_type ) )
-            if self.database_type == DatabaseTypes.MySQL and self.keys[ key_name ].comment then -- Add comment if necessary
-                column_definitions[ #column_definitions ] = column_definitions[ #column_definitions ] .. comment_template:format( self.keys[ key_name ].comment )
+            if datatable.database_type == DatabaseTypes.MySQL and datatable.keys[ key_name ].comment then -- Add comment if necessary
+                column_definitions[ #column_definitions ] = column_definitions[ #column_definitions ] .. comment_template:format( datatable.keys[ key_name ].comment )
             end
         end
     
-        if self.database_type == DatabaseTypes.MySQL and self.table_comment then -- Add comment if necessary
-            column_definitions[ 1 ] = column_definitions[ 1 ] .. comment_template:format( self.table_comment )
+        if datatable.database_type == DatabaseTypes.MySQL and datatable.table_comment then -- Add comment if necessary
+            column_definitions[ 1 ] = column_definitions[ 1 ] .. comment_template:format( datatable.table_comment )
         end
     
-        wrappers.Execute( self.database_type, statement_template:format( self.table_name, table.concat( column_definitions, ", " ) ) )
+        wrappers.Execute( datatable.database_type, statement_template:format( datatable.table_name, table.concat( column_definitions, ", " ) ) )
 
-        for list_name, list_data in pairs( self.lists ) do
+        for list_name, list_data in pairs( datatable.lists ) do
             column_definitions = {
-                column_template:format( self.primary_key_name, self.primary_key_type ) .. " NOT NULL",
+                column_template:format( datatable.primary_key_name, datatable.primary_key_type ) .. " NOT NULL",
                 column_template:format( "key", list_data.key_type ) .. " NOT NULL",
                 column_template:format( "value", list_data.value_type ) .. " NOT NULL",
-                "PRIMARY KEY(`" .. self.primary_key_name .. "`, `key`)", -- Composite primary key of self's primary key and the key of this table.
+                "PRIMARY KEY(`" .. datatable.primary_key_name .. "`, `key`)", -- Composite primary key of self's primary key and the key of this table.
             }
-            wrappers.Execute( self.database_type, statement_template:format( self.table_name .. "_" .. list_name, table.concat( column_definitions, ", " ) ) )
+            wrappers.Execute( datatable.database_type, statement_template:format( datatable.table_name .. "_" .. list_name, table.concat( column_definitions, ", " ) ) )
         end
     
-    elseif self.database_type == DatabaseTypes.Flatfile then
-        if not wrappers.FileExists( self.table_name .. ".txt" ) then
+    elseif datatable.database_type == DatabaseTypes.Flatfile then
+        if not wrappers.FileExists( datatable.table_name .. ".txt" ) then
             local comment_lines = { "; Format:" }
             local comment_template = " <-- %s"
-            table.insert( comment_lines, ('"<%s>"%s'):format( self.primary_key_name, (self.table_comment and comment_template:format( self.table_comment ) or "") ) )
+            table.insert( comment_lines, ('"<%s>"%s'):format( datatable.primary_key_name, (datatable.table_comment and comment_template:format( datatable.table_comment ) or "") ) )
             table.insert( comment_lines, "{" )
-            table.insert( comment_lines, ('    "%s"  "<%s>"%s'):format( self.primary_key_name, self.primary_key_name, "A repeat of the value above, must exist and must be the same" ) )
-            for key_name, key_data in pairs( self.keys ) do
+            table.insert( comment_lines, ('    "%s"  "<%s>"%s'):format( datatable.primary_key_name, datatable.primary_key_name, comment_template:format( "A repeat of the value above, must exist and must be the same" ) ) )
+            for key_name, key_data in pairs( datatable.keys ) do
                 table.insert( comment_lines, ('    "%s"  "<%s>"%s'):format( key_name, key_name, (key_data.comment and comment_template:format( key_data.comment ) or "") ) )
             end
-            for list_name, list_data in pairs( self.lists ) do
+            for list_name, list_data in pairs( datatable.lists ) do
                 table.insert( comment_lines, ('    "%s"%s'):format( list_name, (list_data.comment and comment_template:format( list_data.comment ) or "") ) )
                 table.insert( comment_lines, '    {' )
                 table.insert( comment_lines, '        ...' )
@@ -277,24 +347,15 @@ function DataTable:CreateTableIfNeeded()
             end
             table.insert( comment_lines, "}" )
             
-            self.file_header = table.concat( comment_lines, '\n; ' )
-            self.file_cache = ''
-            saveFlatfile( self )
+            datatable.file_header = table.concat( comment_lines, "\n; " )
+            datatable.file_cache = ""
+            saveFlatfile( datatable )
         else
-            local data = wrappers.FileRead( self.table_name .. ".txt" )
-            local comment, data = SplitCommentHeader( data )
-            self.file_header = comment
-            
-            -- We parse this and then convert back to keyvalues to ensure that it's in a standardized format (and valid).
-            local parsed, err = ParseKeyValues( data )
-            if not parsed then
-                error( "could not read database, possible corruption. error is: " .. err )
-            end
-            self.file_cache = MakeKeyValues( parsed )
+            readFlatfile( datatable )
         end
         
     else
-        return error( unknown_database_type:format( self.database_type, self.table_name ) )
+        return error( unknown_database_type:format( tostring( datatable.database_type ), datatable.table_name ) )
     end
 end
 
@@ -305,6 +366,37 @@ function DataTable:UntrackedCopy( data )
     end
     
     return root
+end
+
+function DataTable:ConvertTo( database_type )
+    if self.database_type == database_type then return end
+    
+    local all = self:GetAll()
+    self.database_type = database_type
+    
+    if DataEqualsAnyOf( self.database_type, DatabaseTypes.SQLite, DatabaseTypes.MySQL ) then
+        local statement = ("DROP TABLE IF EXISTS `%s`"):format( self.table_name )
+        wrappers.Execute( self.database_type, statement )
+        
+        for list_name, list_data in pairs( self.lists ) do
+            statement = ("DROP TABLE IF EXISTS `%s`"):format( list_data.list_table_name )
+            wrappers.Execute( self.database_type, statement )
+        end
+    
+    elseif self.database_type == DatabaseTypes.Flatfile then
+        wrappers.FileDelete( self.table_name .. ".txt" )
+        
+    else
+        return error( unknown_database_type:format( self.database_type, self.table_name ) )
+    end
+    
+    -- Force re-creation
+    self.created = nil
+    createTableIfNeeded( self )
+    
+    for key, value in pairs( all ) do
+        self:Insert( key, value )
+    end
 end
 
 local function newindex( t, key, value )
@@ -341,7 +433,11 @@ local function newindex( t, key, value )
         wrappers.Execute( meta.table.database_type, statement )
         
     elseif meta.table.database_type == DatabaseTypes.Flatfile then
-        local row = meta.table:UntrackedCopy( datatable_cache[ meta.table.table_name ][ meta.primary_key ] )
+        local data = meta.table:Fetch( meta.primary_key )
+        if not data then
+            return error( ("data for '%s' in '%s' was removed, perhaps a row was held for too long?"):format( meta.primary_key, meta.table.table_name ) )
+        end
+        local row = meta.table:UntrackedCopy( data )
         insertOrReplaceIntoFlatfile( meta.table, row )
 
     else
@@ -353,7 +449,9 @@ local function trackRow( datatable, data )
     data = data or {}
     local primary_key = data[ datatable.primary_key_name ]
     local ret = setmetatable( {}, { table=datatable, primary_key=primary_key, __index=data, __newindex=newindex } )
-    datatable_cache[ datatable.table_name ][ primary_key ] = ret
+    if not datatable.no_caching then
+        datatable_cache[ datatable.table_name ][ primary_key ] = ret
+    end
     
     for list_name, list_info in pairs( datatable.lists ) do
         data[ list_name ] = setmetatable( {}, { table=datatable, primary_key=primary_key, list_info=list_info, __index=(data[ list_name ] or {}), __newindex=newindex } )
@@ -363,7 +461,7 @@ local function trackRow( datatable, data )
 end
 
 function DataTable:Insert( primary_key, data )
-    self:CreateTableIfNeeded()
+    createTableIfNeeded( self )
     
     -- Process possibly passed in data
     data = data or {}
@@ -409,11 +507,14 @@ function DataTable:Insert( primary_key, data )
 end
 
 function DataTable:Fetch( primary_key )
-    self:CreateTableIfNeeded()
+    createTableIfNeeded( self )
     
     if datatable_cache[ self.table_name ][ primary_key ] then
+        print( "cache hit for", primary_key )
         return datatable_cache[ self.table_name ][ primary_key ]
     end
+    
+    print( "cache miss for", primary_key )
     
     local data
     if DataEqualsAnyOf( self.database_type, DatabaseTypes.SQLite, DatabaseTypes.MySQL ) then
@@ -449,7 +550,7 @@ function DataTable:Fetch( primary_key )
 end
 
 function DataTable:Remove( primary_key )
-    self:CreateTableIfNeeded()
+    createTableIfNeeded( self )
     
     if DataEqualsAnyOf( self.database_type, DatabaseTypes.SQLite, DatabaseTypes.MySQL ) then
         primary_key = wrappers.FormatAndEscapeData( primary_key )
@@ -478,7 +579,7 @@ function DataTable:Remove( primary_key )
 end
 
 function DataTable:GetAll()
-    self:CreateTableIfNeeded()
+    createTableIfNeeded( self )
     
     local data
     
@@ -523,8 +624,9 @@ end
 local users = CreateDataTable( "users", "steamid", "string(32)", "The steamid of the user" )
 users:AddKey( "group", "string(16)", "The group the user belongs to" )
 users:AddKey( "name", "string(32)", "The name the player was last seen with" )
-users:AddKeyValueList( "allow", "string(16)", "string(128)", "The allows for the user" )
+users:AddListOfKeyValues( "allow", "string(16)", "string(128)", "The allows for the user" )
 
+-- users:DisableCache()
 users:BeginTransaction()
 user1 = users:Insert( "steamid1", { name="B}lob\"", group="operator5", allow={ ["ulx slap"]="*", ["ulx kick"]="*b*" } } )
 user1 = users:Insert( "steamid3", { name="B}\"ob", group="operator5", allow={ ["ulx slap"]="*", ["ulx kick"]="*cccccc*" } } )
@@ -536,25 +638,28 @@ user1.allow[ "ulx slap" ] = "*b*"
 user1.allow[ "ulx slap" ] = "*b*"
 user1.allow[ "ulx kick" ] = "**"
 
---[[user2 = users:Insert( "steamid2" )
+user2 = users:Insert( "steamid2" )
 user2.name = "Bob2"
 user2.group = "operator2"
 user2.allow[ "ulx slap" ] = "*c*"
 user2.allow[ "ulx kick" ] = "*kkk"
-user2.allow[ "ulx kick" ] = nil]]
+user2.allow[ "ulx kick" ] = nil--]]
 users:EndTransaction()
 
 user3 = users:Fetch( "steamid30" )
 print( "user3", user3 )
 
--- user2 = users:Fetch( "steamid2" )
--- print( "user2", user2 )
--- print( Vardump( users:UntrackedCopy( user2 ) ) )
+users:ClearCache()
+user2 = users:Fetch( "steamid2" )
+print( "user2", user2 )
+print( Vardump( users:UntrackedCopy( user2 ) ) )
 
 print( users:Remove( "steamid50" ) )
 
 all_data = users:GetAll()
 print( Vardump( all_data ) )
+
+users:ConvertTo( DatabaseTypes.MySQL )
 
 --[[ Main table: users
 "steamid1"
