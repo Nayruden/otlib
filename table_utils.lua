@@ -188,6 +188,38 @@ function CopyI( t )
     return c
 end
 
+--[[
+    Function: DeepCopy
+
+    Make a deep copy of a table. A deep copy means that any subtables will refer to a new copy of
+    the original subtable.
+
+    Parameters:
+
+        t - The *table* to make a copy of. Must not have any cycles.
+
+    Returns:
+
+        The copied *table*.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
+function DeepCopy( t )
+    -- TODO: test this
+    local c = {}
+    for k, v in pairs( t ) do
+        if type( v ) ~= "table" then
+            c[ k ] = v
+        else
+            c[ k ] = DeepCopy( v )
+        end
+    end
+    
+    return c
+end
+
 local function InPlaceHelper( t, in_place )
     if in_place then
         return t

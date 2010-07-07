@@ -38,6 +38,8 @@ function otlib.wrappers.FormatAndEscapeData( data )
         return string.format( '"%s"', data:gsub( '"', '""' ) )
     elseif data_typ == "nil" then
         return "NULL"
+    elseif data_typ == "number" then
+        return data
     else
         return error( "don't know how to escape data type '" .. data_typ .. "'", 2 )
     end
@@ -90,8 +92,6 @@ end
 function otlib.wrappers.Execute( database_type, statement )
     local conn = getConnection( database_type )
     
-    if type( statement ) ~= "string" then error( "Not a string!", 2 ) end
-    print( statement .. ";" )
     local ret = assert( conn:execute( statement ) )
     if type( ret ) == "number" then
         affected_count = ret
@@ -163,7 +163,7 @@ local error_key_not_registered = "tried to pass in key '%s' to table '%s', but k
 local unknown_database_type = "unknown database type '%s' for table name '%s'"
 
 local function NormalizeType( typ )
-    return typ:gsub( "string", "CHAR" ):gsub( " ", "" ):upper()
+    return typ:gsub( "string", "CHAR" ):gsub( "number", "REAL" ):gsub( " ", "" ):upper()
 end
 
 --- Object: DataTable
@@ -403,15 +403,16 @@ local function newindex( t, key, value )
     if t[ key ] == value then return end -- No action needed
     
     local meta = getmetatable( t )
-    meta.__index[ key ] = value
     
     if meta.table.lists[ key ] then
         return error( "cannot set list keys, table in question is '" .. meta.table.table_name .. "'", 2 )
-    end
-    
-    if not meta.list_info and key ~= meta.table.primary_key_name and not meta.table.keys[ key ] then -- It's data that doesn't belong
+    elseif key == meta.table.primary_key_name then
+        return error( ("cannot set primary key '%s' in table '%s', remove and insert instead"):format( key, meta.table.table_name ), 2 )
+    elseif not meta.list_info and not meta.table.keys[ key ] then -- It's data that doesn't belong
         return error( error_key_not_registered:format( key, meta.table.table_name ), 2 )
     end
+    
+    meta.__index[ key ] = value
     
     if DataEqualsAnyOf( meta.table.database_type, DatabaseTypes.SQLite, DatabaseTypes.MySQL ) then
         local statement
@@ -510,11 +511,8 @@ function DataTable:Fetch( primary_key )
     createTableIfNeeded( self )
     
     if datatable_cache[ self.table_name ][ primary_key ] then
-        print( "cache hit for", primary_key )
         return datatable_cache[ self.table_name ][ primary_key ]
     end
-    
-    print( "cache miss for", primary_key )
     
     local data
     if DataEqualsAnyOf( self.database_type, DatabaseTypes.SQLite, DatabaseTypes.MySQL ) then
@@ -551,6 +549,8 @@ end
 
 function DataTable:Remove( primary_key )
     createTableIfNeeded( self )
+    
+    datatable_cache[ self.table_name ][ primary_key ] = nil
     
     if DataEqualsAnyOf( self.database_type, DatabaseTypes.SQLite, DatabaseTypes.MySQL ) then
         primary_key = wrappers.FormatAndEscapeData( primary_key )
@@ -621,54 +621,24 @@ function DataTable:GetAll()
     return data
 end
 
-local users = CreateDataTable( "users", "steamid", "string(32)", "The steamid of the user" )
-users:AddKey( "group", "string(16)", "The group the user belongs to" )
-users:AddKey( "name", "string(32)", "The name the player was last seen with" )
-users:AddListOfKeyValues( "allow", "string(16)", "string(128)", "The allows for the user" )
-
--- users:DisableCache()
-users:BeginTransaction()
-user1 = users:Insert( "steamid1", { name="B}lob\"", group="operator5", allow={ ["ulx slap"]="*", ["ulx kick"]="*b*" } } )
-user1 = users:Insert( "steamid3", { name="B}\"ob", group="operator5", allow={ ["ulx slap"]="*", ["ulx kick"]="*cccccc*" } } )
-user1 = users:Insert( "steamid5", { name="Bo{b\"¡•∞¢£ƒ˙∫ç∂∆˚¨ƒ˜≤", group="operator5", allow={ ["ulx slap"]="*", ["ulx kick"]="*b*" } } )
--- user1.name = "Bob3"
-user1.group = nil
-user1.group = "operator"
-user1.allow[ "ulx slap" ] = "*b*"
-user1.allow[ "ulx slap" ] = "*b*"
-user1.allow[ "ulx kick" ] = "**"
-
-user2 = users:Insert( "steamid2" )
-user2.name = "Bob2"
-user2.group = "operator2"
-user2.allow[ "ulx slap" ] = "*c*"
-user2.allow[ "ulx kick" ] = "*kkk"
-user2.allow[ "ulx kick" ] = nil--]]
-users:EndTransaction()
-
-user3 = users:Fetch( "steamid30" )
-print( "user3", user3 )
-
-users:ClearCache()
-user2 = users:Fetch( "steamid2" )
-print( "user2", user2 )
-print( Vardump( users:UntrackedCopy( user2 ) ) )
-
-print( users:Remove( "steamid50" ) )
-
-all_data = users:GetAll()
-print( Vardump( all_data ) )
-
-users:ConvertTo( DatabaseTypes.MySQL )
-
---[[ Main table: users
-"steamid1"
-{
-    "name" "bob"
-    "allow" -- New table: users_allow
-    {
-        "ulx slap" "*"
-        "ulx kick" "*"
-    }
-}
-]]
+function DataTable:Empty()
+    createTableIfNeeded( self )
+    self:ClearCache()
+    
+    if DataEqualsAnyOf( self.database_type, DatabaseTypes.SQLite, DatabaseTypes.MySQL ) then
+        local statement = ("DELETE FROM `%s`"):format( self.table_name )
+        wrappers.Execute( self.database_type, statement )
+        
+        for list_name, list_data in pairs( self.lists ) do
+            statement = ("DELETE FROM `%s`"):format( list_data.list_table_name )
+            wrappers.Execute( self.database_type, statement )
+        end
+    
+    elseif self.database_type == DatabaseTypes.Flatfile then
+        self.file_cache = ""
+        saveFlatfile( self )
+        
+    else
+        return error( unknown_database_type:format( self.database_type, self.table_name ) )
+    end
+end

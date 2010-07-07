@@ -9,12 +9,13 @@ dofile( "access.lua" )
 dofile( "debug.lua" )
 dofile( "parameters.lua" )
 dofile( "wrappers.lua" )
+dofile( "simpledata.lua" )
 dofile( "tests/luaunit.lua" )
 
 
 
 function DoTests()
-    local tests = { "utils", "access" }
+    local tests = { "utils", "access", "simpledata" }
     
     for i=1, #tests do
         dofile( "tests/test_" .. tests[ i ] .. ".lua" )
