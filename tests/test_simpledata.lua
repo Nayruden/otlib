@@ -1,7 +1,7 @@
 module( "TestSimpleData", package.seeall )
 
 local function setupTable( database_type )
-    local users = otlib.CreateDataTable( "users", "id", "string(32)", "The id of the user", database_type )
+    local users = otlib.CreateDataTable( "users_" .. database_type, "id", "string(32)", "The id of the user", database_type )
     users:AddKey( "group", "string(16)", "The group the user belongs to" )
     users:AddKey( "name", "string(32)", "The name the player was last seen with" )
     users:AddListOfKeyValues( "allow", "string(16)", "string(128)", "The allows for the user" )
