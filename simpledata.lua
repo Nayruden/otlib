@@ -89,7 +89,7 @@ function otlib.wrappers.EndTransaction( database_type )
     conn:setautocommit( true )
 end
 
-function otlib.wrappers.Execute( database_type, statement )
+function otlib.wrappers.Execute( database_type, statement, key_types )
     local conn = getConnection( database_type )
     
     local ret = assert( conn:execute( statement ) )
@@ -104,6 +104,18 @@ function otlib.wrappers.Execute( database_type, statement )
             row = ret:fetch( {}, "a" )
         end
         ret:close()
+        
+        -- TODO: Remove otlib after move
+        if key_types and #tbl > 0 and database_type == otlib.DatabaseTypes.MySQL then
+            for key_name, key_type in pairs( key_types ) do
+                if key_type == "number" then
+                    for i=1, #tbl do
+                        tbl[ i ][ key_name ] = tonumber( tbl[ i ][ key_name ] )
+                    end
+                end
+            end
+        end
+        
         return tbl
     end
 end
@@ -163,7 +175,13 @@ local error_key_not_registered = "tried to pass in key '%s' to table '%s', but k
 local unknown_database_type = "unknown database type '%s' for table name '%s'"
 
 local function NormalizeType( typ )
-    return typ:gsub( "string", "CHAR" ):gsub( "number", "REAL" ):gsub( " ", "" ):upper()
+    if typ == "number" then
+        return "REAL", typ
+    elseif typ:find( "string%s*%(?%d*%)?") then
+        return typ:gsub( "string", "CHAR" ):gsub( " ", "" ):upper(), "string"
+    else
+        return error( "unrecognized type in simpledata '" .. typ .. "'", 2 )
+    end
 end
 
 --- Object: DataTable
@@ -187,6 +205,7 @@ function CreateDataTable( table_name, primary_key_name, primary_key_type, commen
     
     -- Key info
     new_data_table.keys = {}
+    new_data_table.key_lua_types = { [primary_key_name]="string" }
     new_data_table.lists = {}
     new_data_table.comments = {}
     
@@ -194,19 +213,26 @@ function CreateDataTable( table_name, primary_key_name, primary_key_type, commen
 end
 
 function DataTable:AddKey( key_name, value_type, comment )
+    local sql_type, lua_type = NormalizeType( value_type )
     self.keys[ key_name ] = {
-        value_type = NormalizeType( value_type ),
+        sql_type = sql_type,
         comment = comment,
     }
+    
+    self.key_lua_types[ key_name ] = lua_type
     
     return self
 end
 
 function DataTable:AddListOfKeyValues( list_name, key_type, value_type, comment )
+    local key_sql_type, key_lua_type = NormalizeType( key_type )
+    local value_sql_type, value_lua_type = NormalizeType( value_type )
+    
     self.lists[ list_name ] = {
         list_table_name = self.table_name .. "_" .. list_name, -- Only relevant for SQL
-        key_type = NormalizeType( key_type ),
-        value_type = NormalizeType( value_type ),
+        key_sql_type = key_sql_type,
+        value_sql_type = value_sql_type,
+        key_lua_types = { [self.primary_key_name]="string", key=key_lua_type, value=value_lua_type },
         comment = comment,
     }
 end
@@ -307,7 +333,7 @@ function createTableIfNeeded( datatable )
         -- Normally primary key implies not null, but sqlite3 doesn't follow the standard, so we explicitly state it
         local column_definitions = { column_template:format( datatable.primary_key_name, datatable.primary_key_type ) .. " PRIMARY KEY NOT NULL" } -- Prepopulate with primary key column definition
         for key_name, key_data in pairs( datatable.keys ) do
-            table.insert( column_definitions, column_template:format( key_name, key_data.value_type ) )
+            table.insert( column_definitions, column_template:format( key_name, key_data.sql_type ) )
             if datatable.database_type == DatabaseTypes.MySQL and datatable.keys[ key_name ].comment then -- Add comment if necessary
                 column_definitions[ #column_definitions ] = column_definitions[ #column_definitions ] .. comment_template:format( datatable.keys[ key_name ].comment )
             end
@@ -317,16 +343,19 @@ function createTableIfNeeded( datatable )
             column_definitions[ 1 ] = column_definitions[ 1 ] .. comment_template:format( datatable.table_comment )
         end
     
-        wrappers.Execute( datatable.database_type, statement_template:format( datatable.table_name, table.concat( column_definitions, ", " ) ) )
+        local statement = statement_template:format( datatable.table_name, table.concat( column_definitions, ", " ) )
+        wrappers.Execute( datatable.database_type, statement )
 
         for list_name, list_data in pairs( datatable.lists ) do
             column_definitions = {
                 column_template:format( datatable.primary_key_name, datatable.primary_key_type ) .. " NOT NULL",
-                column_template:format( "key", list_data.key_type ) .. " NOT NULL",
-                column_template:format( "value", list_data.value_type ) .. " NOT NULL",
+                column_template:format( "key", list_data.key_sql_type ) .. " NOT NULL",
+                column_template:format( "value", list_data.value_sql_type ) .. " NOT NULL",
                 "PRIMARY KEY(`" .. datatable.primary_key_name .. "`, `key`)", -- Composite primary key of self's primary key and the key of this table.
             }
-            wrappers.Execute( datatable.database_type, statement_template:format( datatable.table_name .. "_" .. list_name, table.concat( column_definitions, ", " ) ) )
+            
+            statement = statement_template:format( datatable.table_name .. "_" .. list_name, table.concat( column_definitions, ", " ) )
+            wrappers.Execute( datatable.database_type, statement )
         end
     
     elseif datatable.database_type == DatabaseTypes.Flatfile then
@@ -518,14 +547,14 @@ function DataTable:Fetch( primary_key )
     if DataEqualsAnyOf( self.database_type, DatabaseTypes.SQLite, DatabaseTypes.MySQL ) then
         primary_key = wrappers.FormatAndEscapeData( primary_key )
         local statement = ("SELECT * FROM `%s` WHERE `%s`=%s"):format( self.table_name, self.primary_key_name, primary_key )
-        local raw = wrappers.Execute( self.database_type, statement )
+        local raw = wrappers.Execute( self.database_type, statement, self.key_lua_types )
         if #raw == 0 then return nil end
         assert( #raw == 1 )
         data = raw[ 1 ]
         
         for list_name, list_info in pairs( self.lists ) do
             statement = ("SELECT * FROM `%s` WHERE `%s`=%s"):format( list_info.list_table_name, self.primary_key_name, primary_key )
-            raw = wrappers.Execute( self.database_type, statement )
+            raw = wrappers.Execute( self.database_type, statement, list_info.key_lua_types )
             local t = {}
             data[ list_name ] = t
             for i=1, #raw do
@@ -585,7 +614,7 @@ function DataTable:GetAll()
     
     if DataEqualsAnyOf( self.database_type, DatabaseTypes.SQLite, DatabaseTypes.MySQL ) then
         local statement = ("SELECT * FROM `%s`"):format( self.table_name )
-        local raw = wrappers.Execute( self.database_type, statement )
+        local raw = wrappers.Execute( self.database_type, statement, self.key_lua_types )
         if #raw == 0 then return {} end
         
         data = {}
@@ -598,7 +627,7 @@ function DataTable:GetAll()
     
         for list_name, list_info in pairs( self.lists ) do
             statement = ("SELECT * FROM `%s`"):format( list_info.list_table_name )
-            raw = wrappers.Execute( self.database_type, statement )
+            raw = wrappers.Execute( self.database_type, statement, list_info.key_lua_types )
             for i=1, #raw do
                 local t = data[ raw[ i ][ self.primary_key_name ] ]
                 if t then -- We should never have a case where this isn't a table... but just to make sure
