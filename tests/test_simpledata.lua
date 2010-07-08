@@ -15,8 +15,6 @@ local userc = { name="Bo{b\"¡•∞¢£ƒ˙∫ç∂∆", id="id_c", deny={ "pi"
 local userd = { name="!@#$%^&*()", id="id_d", group="superadmin" }
 
 local function runBasicTest( users )
-    -- users:DisableCache()
-    -- users:BeginTransaction()
     local usera_db = users:Insert( usera.id, otlib.DeepCopy( usera ) )
     
     usera_db.group = nil -- Can this be removed alright?
@@ -45,9 +43,12 @@ local function runBasicTest( users )
     userd_db.group = userd.group
     users:EndTransaction()
     AssertEquals( userd_db, users:Fetch( userd.id ) ) -- Should be from the cache
-    users:ClearCache()
+    users:DisableCache()
     AssertNotEquals( userd_db, users:Fetch( userd.id ) ) -- Should regen
     AssertTablesEqual( users:UntrackedCopy( userd_db ), users:UntrackedCopy( users:Fetch( userd.id ) ) ) -- But be equal
+    AssertNotEquals( userd_db, users:Fetch( userd.id ) ) -- Should regen
+    AssertTablesEqual( users:UntrackedCopy( userd_db ), users:UntrackedCopy( users:Fetch( userd.id ) ) ) -- But be equal
+    users:EnableCache()
 
     AssertEquals( users:Fetch( "id_f" ), nil )
     AssertEquals( users:Remove( "id_f" ), false )
@@ -56,22 +57,32 @@ local function runBasicTest( users )
     all_data = users:GetAll()
     AssertEquals( all_data[ userb.id ], nil )
     AssertTablesEqual( all_data[ userc.id ], userc )
+    return all_data
 end
 
 function TestSQLite3()
     local users = setupTable( otlib.DatabaseTypes.SQLite )
     users:Empty()
-    runBasicTest( users )
+    local all_data = runBasicTest( users )
+    
+    users:ConvertTo( otlib.DatabaseTypes.MySQL )
+    AssertTablesEqual( all_data, users:GetAll() )
 end
 
 function TestMySQL()
     local users = setupTable( otlib.DatabaseTypes.MySQL )
     users:Empty()
     runBasicTest( users )
+    
+    users:ConvertTo( otlib.DatabaseTypes.Flatfile )
+    AssertTablesEqual( all_data, users:GetAll() )
 end
 
 function TestFlatfile()
     local users = setupTable( otlib.DatabaseTypes.Flatfile )
     users:Empty()
     runBasicTest( users )
+    
+    users:ConvertTo( otlib.DatabaseTypes.SQLite )
+    AssertTablesEqual( all_data, users:GetAll() )
 end

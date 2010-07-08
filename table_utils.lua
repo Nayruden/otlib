@@ -853,7 +853,12 @@ local function MakeKeyValuesHelper( t, depth, completed )
             end
             
             -- We pass in a *copy* of completed so we find only cycles, not joins
-            serialized = string.format( "{\n%s\n%s}", MakeKeyValuesHelper( v, depth+1, Copy( completed ) ), tab )
+            local sub_serialized = MakeKeyValuesHelper( v, depth+1, Copy( completed ) )
+            if sub_serialized ~= "" then
+                serialized = string.format( "{\n%s\n%s}", sub_serialized, tab )
+            else
+                serialized = string.format( "{\n%s}", tab )
+            end
         elseif v_typ == "string" then
             serialized = ("%q"):format( v )
         elseif v_typ == "number" or v_type == "boolean" then
