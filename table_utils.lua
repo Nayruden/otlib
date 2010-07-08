@@ -207,7 +207,6 @@ end
         v1.00 - Initial.
 ]]
 function DeepCopy( t )
-    -- TODO: test this
     local c = {}
     for k, v in pairs( t ) do
         if type( v ) ~= "table" then

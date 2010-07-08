@@ -554,7 +554,32 @@ end
 
 --[[
     Function: DataEqualsAnyOf
-    -- TODO
+
+    Checks to see if an argument equals any of the other arguments passed in.
+    
+    Parameters:
+    
+        data - The data to test equality against.
+        ... - All the other arguments, which get tested against data in successive order until a
+            match is found or until we run out of arguments.
+
+    Returns:
+
+        A *boolean* stating whether or not any of the other arguments equaled the data argument.
+        
+    Example:
+    
+        This is a conveinence function so that instead of writing this...
+        
+        :if a == b or a == c or a == d then ... end
+        
+        You can write this...
+
+        :if DataEqualsAnyOf( a, b, c, d ) then ... end
+
+    Revisions:
+
+        v1.00 - Initial.
 ]]
 function DataEqualsAnyOf( data, ... )
     local argv = { ... }

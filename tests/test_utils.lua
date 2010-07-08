@@ -117,6 +117,18 @@ function TestStoredExpression()
     AssertTablesEqual( { ex.unpack() }, { true, 3 } )
 end
 
+function TestDataEqualsAnyOf()
+    local a, b, c, d = "a", "b", "c", "d"
+    AssertEquals( otlib.DataEqualsAnyOf( a, b, c, d ), false )
+    AssertEquals( otlib.DataEqualsAnyOf( a, b, c, d, a ), true )
+    AssertEquals( otlib.DataEqualsAnyOf( a, a, b, c, d ), true )
+    AssertEquals( otlib.DataEqualsAnyOf( a, b, c, d, b, c, d, b, c, d, b, c, d ), false )
+    AssertEquals( otlib.DataEqualsAnyOf( a, b, c, d, b, c, d, b, c, d, b, c, d, a ), true )
+end
+
+
+-- Table utils
+
 function TestCount()
     AssertEquals( otlib.Count( { 1, 3, "two", [{}]=4 } ), 4 )
     AssertEquals( otlib.Count( {} ), 0 )
@@ -139,9 +151,20 @@ function TestCopy()
     AssertTablesEqual( otlib.Copy( t ), t )
     AssertTablesEqual( otlib.CopyI( t ), { "hey" } )
     
-    t = { "one", "two" }
+    t = { "one", "two", { "buckle my shoe", "tie a rope" } }
     AssertTablesEqual( t, otlib.Copy( t ) )
+    AssertEquals( t[ 3 ], otlib.Copy( t )[ 3 ] ) -- Not deep
     AssertTablesEqual( t, otlib.CopyI( t ) )
+    AssertEquals( t[ 3 ], otlib.CopyI( t )[ 3 ] ) -- Not deep
+end
+
+function TestDeepCopy()
+    local t = { [1]="hey", blah=67, mango="one" }
+    AssertTablesEqual( otlib.DeepCopy( t ), t )
+    
+    t = { "one", "two", three={ "buckle my shoe", "tie a rope" } }
+    AssertTablesEqual( t, otlib.DeepCopy( t ) )
+    AssertNotEquals( t.three, otlib.DeepCopy( t ).three ) -- Deep
 end
 
 local function InPlaceTester( desired, fn, ... )
