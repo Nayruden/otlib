@@ -1,6 +1,7 @@
+module( "otlib", package.seeall )
 
 -- I make no promises that this properly escapes data, it's only for testing.
-function otlib.wrappers.FormatAndEscapeData( data )
+function wrappers.FormatAndEscapeData( data )
     local data_typ = type( data )
     if data_typ == "string" then
         return string.format( '"%s"', data:gsub( '"', '""' ) )
@@ -19,8 +20,7 @@ local mysql_env
 local sqlite3_conn
 local mysql_conn
 local function getConnection( database_type )
-    -- TODO remove the otlib after move
-    if database_type == otlib.DatabaseTypes.MySQL then
+    if database_type == DatabaseTypes.MySQL then
         if not mysql_conn then
             if mysql_env then
                 mysql_env:close()
@@ -31,7 +31,7 @@ local function getConnection( database_type )
             mysql_conn = assert( mysql_env:connect( "simpledata", "root" ) )
         end
         return mysql_conn
-    elseif database_type == otlib.DatabaseTypes.SQLite then
+    elseif database_type == DatabaseTypes.SQLite then
         if not sqlite3_conn then
             if sqlite3_env then
                 sqlite3_env:close()
@@ -47,17 +47,17 @@ local function getConnection( database_type )
     end
 end
 
-function otlib.wrappers.BeginTransaction( database_type )
+function wrappers.BeginTransaction( database_type )
     getConnection( database_type ):setautocommit( false )
 end
 
-function otlib.wrappers.EndTransaction( database_type )
+function wrappers.EndTransaction( database_type )
     local conn = getConnection( database_type )
     conn:commit()
     conn:setautocommit( true )
 end
 
-function otlib.wrappers.Execute( database_type, statement, key_types )
+function wrappers.Execute( database_type, statement, key_types )
     local conn = getConnection( database_type )
     
     local ret = assert( conn:execute( statement ) )
@@ -73,8 +73,7 @@ function otlib.wrappers.Execute( database_type, statement, key_types )
         end
         ret:close()
         
-        -- TODO: Remove otlib after move
-        if key_types and #tbl > 0 and database_type == otlib.DatabaseTypes.MySQL then
+        if key_types and #tbl > 0 and database_type == DatabaseTypes.MySQL then
             for key_name, key_type in pairs( key_types ) do
                 if key_type == "number" then
                     for i=1, #tbl do
@@ -88,11 +87,11 @@ function otlib.wrappers.Execute( database_type, statement, key_types )
     end
 end
 
-function otlib.wrappers.AffectedRows()
+function wrappers.AffectedRows()
     return affected_count
 end
 
-function otlib.wrappers.FileExists( file_name )
+function wrappers.FileExists( file_name )
     local f = io.open( file_name )
     if f ~= nil then
         io.close( f )
@@ -102,7 +101,7 @@ function otlib.wrappers.FileExists( file_name )
     end
 end
 
-function otlib.wrappers.FileRead( file_name )
+function wrappers.FileRead( file_name )
     local f = io.open( file_name )
     assert( f )
     local str = f:read( "*a" )
@@ -110,13 +109,13 @@ function otlib.wrappers.FileRead( file_name )
     return str
 end
 
-function otlib.wrappers.FileWrite( file_name, data )
+function wrappers.FileWrite( file_name, data )
     local f = io.open( file_name, "w+" )
     assert( f )
     f:write( data )
     io.close( f )
 end
 
-function otlib.wrappers.FileDelete( file_name )
+function wrappers.FileDelete( file_name )
     os.remove( file_name )
 end

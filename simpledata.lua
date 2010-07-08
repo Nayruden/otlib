@@ -21,7 +21,7 @@
         * Optional comments are added to MySQL and the flatfile to describe your data.
 ]]
 
---- Module: otlib.simpledata
+--- Module: otlib
 module( "otlib", package.seeall )
 
 --[[
@@ -33,11 +33,14 @@ DatabaseTypes = {
 }
 ]]
 
+--- Variable: preferred_database_type
+--- The *<DatabaseTypes>* to use by default.
 preferred_database_type = DatabaseTypes.Flatfile
 local error_key_not_registered = "tried to pass in key '%s' to table '%s', but key was not registered"
 local unknown_database_type = "unknown database type '%s' for table name '%s'"
 
-local function NormalizeType( typ )
+-- Normalize a type and pass back the sql type and the lua type.
+local function normalizeType( typ )
     if typ == "number" then
         return "REAL", typ
     elseif typ:find( "string%s*%(?%d*%)?") then
@@ -51,15 +54,41 @@ end
 local DataTable = object:Clone()
 local datatable_cache = {}
 
+--[[
+    Function: CreateDataTable
+
+    Creates a new data table for use.
+
+    Parameters:
+
+        table_name - The unique *string* of the table name. IE, "users" for data about users.
+        primary_key_name - The *string* of the name for the primary key of the table. IE, 
+            "ip_address". For more information see <DataTable.AddKey>.
+        primary_key_type - The *string* of the type for the primary key of the table. For more
+            information see <DataTable.AddKey>.
+        comment - The *optional string* of the comment to use for the primary key.
+        database_type - The *optional <DatabaseTypes>* to use for this table. Defaults to the value
+            of _<preferred_database_type>_.
+
+    Returns:
+
+        The newly created <DataTable>.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
 function CreateDataTable( table_name, primary_key_name, primary_key_type, comment, database_type )
-    if DataEqualsAnyOf( primary_key_name, "key", "value" ) then
+    if datatable_cache[ table_name ] then
+        return error( "table named '" .. table_name .. "' has already been created" )
+    elseif DataEqualsAnyOf( primary_key_name, "key", "value" ) then
         return error( "cannot have a primary key name of 'key' or 'value', these names are reserved", 2 )
     end
     
     local new_data_table = DataTable:Clone()
     new_data_table.table_name = table_name
     new_data_table.primary_key_name = primary_key_name
-    new_data_table.primary_key_type = NormalizeType( primary_key_type )
+    new_data_table.primary_key_type = normalizeType( primary_key_type )
     new_data_table.table_comment = comment
     new_data_table.database_type = database_type or preferred_database_type
     
@@ -75,8 +104,43 @@ function CreateDataTable( table_name, primary_key_name, primary_key_type, commen
     return new_data_table
 end
 
-function DataTable:AddKey( key_name, value_type, comment )
-    local sql_type, lua_type = NormalizeType( value_type )
+
+--[[
+    Function: Datatable.AddKey
+
+    Adds a key to the data table. To help understand this, imagine that you couldn't just do 
+    my_table.my_key = some_value in lua, that you had to define my_key first before you were able
+    to assign to it. That's basically what this function is for. You'll need to define any keys you
+    want to use before you use them.
+    
+    This function must be used directly after you create the table using <CreateDataTable> and
+    before you use functions such as <Datatable.Insert> or <Datatable.Fetch>.
+
+    Parameters:
+
+        key_name - The *string* of a key name for the table. IE, "group". This name is what you'll
+            use to refer to the data later.
+        key_type - The *string* of the type for this key in the table. Valid strings to pass in are
+            "string(<max_length_of_string)" or "number".
+        comment - The *optional string* of the comment to use for this key. The comment will show
+            up in flatfiles and in MySQL.
+
+    Returns:
+
+        *Self*.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
+function DataTable:AddKey( key_name, key_type, comment )
+    if self.created then
+        return error( "datatable has already been finalized", 2 )
+    elseif self.lists[ key_name ] then
+        return error( "that name is already being used by a list of key values", 2 )
+    end
+    
+    local sql_type, lua_type = normalizeType( key_type )
     self.keys[ key_name ] = {
         sql_type = sql_type,
         comment = comment,
@@ -87,9 +151,49 @@ function DataTable:AddKey( key_name, value_type, comment )
     return self
 end
 
+
+--[[
+    Function: Datatable.AddListOfKeyValues
+
+    Adds a key to the data table, whose value is going to be a table. To help understand this, 
+    imagine that you couldn't just do my_table.my_key = {} in lua, that you had to define my_key 
+    first before you were able to assign a table to it. That's basically what this function is for.
+    You'll need to define any keys you want to use before you use them.
+    
+    In this case, the value of the key defined here is a table that can contain anything, as long
+    as each key and value in the table conform to the types given, below.
+    
+    This function must be used directly after you create the table using <CreateDataTable> and
+    before you use functions such as <Datatable.Insert> or <Datatable.Fetch>.
+
+    Parameters:
+
+        list_name - The *string* of a list name for the table. IE, "allow". This name is what 
+            you'll use to refer to the data later.
+        key_type - The *string* of the type for the keys in the list. See <Datatable.AddKey> for
+            more information.
+        value_type - The *string* of the type for the values in the list. See <Datatable.AddKey> 
+            for more information.
+        comment - The *optional string* of the comment to use for this key. The comment will show
+            up in flatfiles and in MySQL.
+
+    Returns:
+
+        *Self*.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
 function DataTable:AddListOfKeyValues( list_name, key_type, value_type, comment )
-    local key_sql_type, key_lua_type = NormalizeType( key_type )
-    local value_sql_type, value_lua_type = NormalizeType( value_type )
+    if self.created then
+        return error( "datatable has already been finalized", 2 )
+    elseif self.keys[ list_name ] then
+        return error( "that name is already being used by a key", 2 )
+    end
+    
+    local key_sql_type, key_lua_type = normalizeType( key_type )
+    local value_sql_type, value_lua_type = normalizeType( value_type )
     
     self.lists[ list_name ] = {
         list_table_name = self.table_name .. "_" .. list_name, -- Only relevant for SQL
@@ -98,14 +202,20 @@ function DataTable:AddListOfKeyValues( list_name, key_type, value_type, comment 
         key_lua_types = { [self.primary_key_name]="string", key=key_lua_type, value=value_lua_type },
         comment = comment,
     }
+    
+    return self
 end
 
+-- Read the header and data sections of a flat file into our cache
 local function readFlatfile( datatable )
     local data = wrappers.FileRead( datatable.table_name .. ".txt" )
     local comment, data = SplitCommentHeader( data )
     datatable.file_header = comment
     
+    -- TODO: A much better way to do this... (need to change find in flat file too since we could no longer promise valid data)
+    -- Also change the comment in DisableCache (and maybe really support cache disabling)
     -- We parse this and then convert back to keyvalues to ensure that it's in a standardized format (and valid).
+    -- Maybe read each line and do %s*{%s* pattern?
     local parsed, err = ParseKeyValues( data )
     if not parsed then
         error( "could not read database, possible corruption. error is: " .. err )
@@ -113,18 +223,21 @@ local function readFlatfile( datatable )
     datatable.file_cache = MakeKeyValues( parsed )
 end
 
+-- Saves the flatfile from cache
 local function saveFlatfile( datatable )
     if not datatable.in_transaction then
         wrappers.FileWrite( datatable.table_name .. ".txt", datatable.file_header .. "\n" .. datatable.file_cache .. "\n" )
     end
 end
 
+-- Just a little utility that's almost like SELECT for flat files
 local function findInFlatfile( datatable, primary_key )
     -- We can use the following pattern because we're sure that the cache will always be in standard format.
     -- Normally I'd want to use %b{}, but that won't work here since the data may contain braces.
     return datatable.file_cache:find( ("%q"):format( primary_key ) .. "\n{.-\n}" )
 end
 
+-- Pretty much the equivalent of REPLACE for flat files
 local function insertOrReplaceIntoFlatfile( datatable, data )
     local keyvalues = MakeKeyValues{ [data[ datatable.primary_key_name ]] = data }
     
@@ -138,6 +251,22 @@ local function insertOrReplaceIntoFlatfile( datatable, data )
     saveFlatfile( datatable )
 end
 
+
+--[[
+    Function: Datatable.BeginTransaction
+
+    Begins a transaction. Between beginning and ending a transaction, data is basically built up in
+    a buffer before getting sent off. This is especially useful for flatfiles since it means that
+    we won't have to save the file (which is slow) a thousand times when data is initialized if the
+    initialization takes advantage of transactions.
+
+    You should note that not all implementations support transactions though, so this function
+    might be silently ignored.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
 function DataTable:BeginTransaction()
     self.in_transaction = true
     
@@ -152,6 +281,16 @@ function DataTable:BeginTransaction()
     end
 end
 
+
+--[[
+    Function: Datatable.EndTransaction
+
+    See <Datatable.BeginTransaction>.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
 function DataTable:EndTransaction()
     self.in_transaction = nil
     
@@ -166,6 +305,17 @@ function DataTable:EndTransaction()
     end
 end
 
+
+--[[
+    Function: Datatable.ClearCache
+
+    Clears any cache that may be built up in this datatable. This is a good function to use when
+    you know the external data has changed. For flatfiles this forces the file to be re-read.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
 function DataTable:ClearCache()
     if self.database_type == DatabaseTypes.Flatfile then
         readFlatfile( self )
@@ -174,16 +324,38 @@ function DataTable:ClearCache()
     datatable_cache[ self.table_name ] = {}
 end
 
--- Doc special case: flatfiles
+--[[
+    Function: Datatable.DisableCache
+
+    First clears the cache with <Datatable.ClearCache> and disables further caching until 
+    re-enabled with <Datatable.EnableCache>. Flatfiles are a bit of a special case in that
+    disabling the cache won't force the file to be re-read every time we need to fetch data. This
+    is because of how insanely expensive it is for us to read the file in every time.
+    
+    Revisions:
+
+        v1.00 - Initial.
+]]
 function DataTable:DisableCache()
     self:ClearCache()
     self.no_caching = true
 end
 
+
+--[[
+    Function: Datatable.EnableCache
+
+    See <Datatable.DisableCache>.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
 function DataTable:EnableCache()
     self.no_caching = nil
 end
 
+-- Setup the table if it needs to be setup.
 function createTableIfNeeded( datatable )
     if datatable.created then return end
     datatable.created = true
@@ -251,6 +423,29 @@ function createTableIfNeeded( datatable )
     end
 end
 
+
+--[[
+    Function: Datatable.UntrackedCopy
+
+    One of the downsides of using <DataTable> is that data you get out of it (except 
+    <DataTable.GetAll>) can't be thrown throw an iterator like pairs because of the way we track
+    changes to the table. To help alleviate this problem, you can create an untracked copy of the
+    data using this function.
+
+    Parameters:
+
+        data - The *table* of the data you want to get an untracked copy of. Must directly be the 
+            table you got from <DataTable.Insert> or <DataTable.Fetch>. Don't pass anything else in
+            here.
+
+    Returns:
+
+        The copied, untracked *table*.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
 function DataTable:UntrackedCopy( data )
     local root = Copy( getmetatable( data ).__index )
     for list_name, list_info in pairs( self.lists ) do
@@ -260,6 +455,26 @@ function DataTable:UntrackedCopy( data )
     return root
 end
 
+
+--[[
+    Function: Datatable.ConvertTo
+
+    Convert the <DataTable> from using one database type to another. Before converting the data to
+    the new database type, it completely wipes whatever information was in the destination database
+    type, so make sure you're okay with losing whatever information may be there.
+
+    Parameters:
+
+        database_type - The destination *<DatabaseTypes>*.
+
+    Returns:
+
+        *Self*.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
 function DataTable:ConvertTo( database_type )
     if self.database_type == database_type then return end
     
@@ -298,8 +513,11 @@ function DataTable:ConvertTo( database_type )
     if not was_in_transaction then
         self:EndTransaction()
     end
+    
+    return self
 end
 
+-- Called when new information is assigned to our tracked table
 local function newindex( t, key, value )
     if t[ key ] == value then return end -- No action needed
     
@@ -347,6 +565,7 @@ local function newindex( t, key, value )
     end
 end
 
+-- Track a row...
 local function trackRow( datatable, data )
     data = data or {}
     local primary_key = data[ datatable.primary_key_name ]
@@ -362,6 +581,27 @@ local function trackRow( datatable, data )
     return ret
 end
 
+
+--[[
+    Function: Datatable.Insert
+
+    Insert (or replace existing with) a new row.
+
+    Parameters:
+
+        primary_key - The primary key for the new row, should be the same type as you declared it
+            to be in <CreateDataTable>.
+        data - An *optional table* of data to constitute this row. Whatever information is required
+            that isn't present in this table will be added by the function. Defaults to _{}_.
+
+    Returns:
+
+        The *table* that constitutes the tracked, inserted row. Use this new value to modify data.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
 function DataTable:Insert( primary_key, data )
     createTableIfNeeded( self )
     
@@ -408,6 +648,25 @@ function DataTable:Insert( primary_key, data )
     return trackRow( self, data )
 end
 
+
+--[[
+    Function: Datatable.Fetch
+
+    Fetch a row from the database.
+
+    Parameters:
+
+        primary_key - The primary key for the new row, should be the same type as you declared it
+            to be in <CreateDataTable>.
+
+    Returns:
+
+        The *table* that constitutes the tracked, inserted row if it exists, *nil* if it doesn't.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
 function DataTable:Fetch( primary_key )
     createTableIfNeeded( self )
     
@@ -448,6 +707,25 @@ function DataTable:Fetch( primary_key )
     return trackRow( self, data )
 end
 
+
+--[[
+    Function: Datatable.Remove
+
+    Delets a row from the database.
+
+    Parameters:
+
+        primary_key - The primary key for the new row, should be the same type as you declared it
+            to be in <CreateDataTable>.
+
+    Returns:
+
+        A *boolean*, true if it existed and was removed, *false* if the row didn't exist.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
 function DataTable:Remove( primary_key )
     createTableIfNeeded( self )
     
@@ -479,6 +757,22 @@ function DataTable:Remove( primary_key )
     end
 end
 
+
+--[[
+    Function: Datatable.GetAll
+
+    Fetchs all rows from the database. This is similar to <Datatable.Fetch>, except that it fetches
+    all rows in the entire database, and all returned data is untracked. This obviously pretty slow
+    and should only be used if absolutely necessary.
+
+    Returns:
+
+        The *table* that constitutes the entire database.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
 function DataTable:GetAll()
     createTableIfNeeded( self )
     
@@ -522,6 +816,16 @@ function DataTable:GetAll()
     return data
 end
 
+
+--[[
+    Function: Datatable.Empty
+
+    Empties all existing data for this database and clears any caches.
+
+    Revisions:
+
+        v1.00 - Initial.
+]]
 function DataTable:Empty()
     createTableIfNeeded( self )
     self:ClearCache()

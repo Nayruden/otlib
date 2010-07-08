@@ -114,7 +114,7 @@ function AffectedRows()
 end
 
 
--- Group: File Wrapper Functions
+--- Group: File Wrapper Functions
 
 --[[
     Function: FileExists

@@ -2,6 +2,7 @@
 --- Run this file to run the OTLib test suite.
 
 dofile( "init.lua" )
+dofile( "defines.lua" )
 dofile( "utils.lua" )
 dofile( "table_utils.lua" )
 dofile( "prototype.lua" )
@@ -11,6 +12,7 @@ dofile( "parameters.lua" )
 dofile( "wrappers.lua" )
 dofile( "simpledata.lua" )
 dofile( "tests/luaunit.lua" )
+dofile( "console/wrappers.lua" )
 
 
 
