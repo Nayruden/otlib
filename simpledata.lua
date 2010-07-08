@@ -208,19 +208,8 @@ end
 
 -- Read the header and data sections of a flat file into our cache
 local function readFlatfile( datatable )
-    local data = wrappers.FileRead( datatable.table_name .. ".txt" )
-    local comment, data = SplitCommentHeader( data )
-    datatable.file_header = comment
-    
-    -- TODO: A much better way to do this... (need to change find in flat file too since we could no longer promise valid data)
-    -- Also change the comment in DisableCache (and maybe really support cache disabling)
-    -- We parse this and then convert back to keyvalues to ensure that it's in a standardized format (and valid).
-    -- Maybe read each line and do %s*{%s* pattern?
-    local parsed, err = ParseKeyValues( data )
-    if not parsed then
-        error( "could not read database, possible corruption. error is: " .. err )
-    end
-    datatable.file_cache = MakeKeyValues( parsed )
+    local file = wrappers.FileRead( datatable.table_name .. ".txt" )
+    datatable.file_header, datatable.file_cache = SplitCommentHeader( file )
 end
 
 -- Saves the flatfile from cache
@@ -230,11 +219,32 @@ local function saveFlatfile( datatable )
     end
 end
 
--- Just a little utility that's almost like SELECT for flat files
+-- Just a little utility that's almost like SELECT for flat files (just returning location in file though)
 local function findInFlatfile( datatable, primary_key )
-    -- We can use the following pattern because we're sure that the cache will always be in standard format.
     -- Normally I'd want to use %b{}, but that won't work here since the data may contain braces.
-    return datatable.file_cache:find( ("%q"):format( primary_key ) .. "\n{.-\n}" )
+    local start, end_chunk = datatable.file_cache:find( ("%q"):format( primary_key ) .. "%s-\n%s*{" )
+    if not start then return nil, nil end
+    
+    local dummy, matched
+    local depth = 1 -- We read past the first brace
+    while depth ~= 0 do
+        dummy, end_chunk, matched = datatable.file_cache:find( "\n%s*([{}])", end_chunk+1 )
+        if not matched then
+            return error( "data table for '" .. datatable.table_name .. "' corrupt" )
+        elseif matched == "{" then
+            depth = depth + 1
+        elseif matched == "}" then
+            depth = depth - 1
+        else
+            return error( "logical failure" )
+        end
+        
+        if depth == 3 then
+            return error( "data table for '" .. datatable.table_name .. "'corrupt" )
+        end
+    end
+    
+    return start, end_chunk+1
 end
 
 -- Pretty much the equivalent of REPLACE for flat files
@@ -329,8 +339,7 @@ end
 
     First clears the cache with <Datatable.ClearCache> and disables further caching until 
     re-enabled with <Datatable.EnableCache>. Flatfiles are a bit of a special case in that
-    disabling the cache won't force the file to be re-read every time we need to fetch data. This
-    is because of how insanely expensive it is for us to read the file in every time.
+    disabling the cache won't force the file to be re-read every time we need to fetch data.
     
     Revisions:
 
@@ -696,8 +705,15 @@ function DataTable:Fetch( primary_key )
     elseif self.database_type == DatabaseTypes.Flatfile then
         local start, stop = findInFlatfile( self, primary_key )
         if not start then return nil end
-        data = ParseKeyValues( self.file_cache:sub( start, stop ) )
-        assert( Count( data ) == 1 )
+        local err
+        data, err = ParseKeyValues( self.file_cache:sub( start, stop ) )
+        if not data or Count( data ) ~= 1 then
+            if err then
+                return error( "data table for '" .. datatable.table_name .. "' corrupt, error is: " .. err )
+            else
+                return error( "data table for '" .. datatable.table_name .. "' corrupt" )
+            end
+        end
         data = data[ primary_key ]
 
     else
@@ -806,7 +822,7 @@ function DataTable:GetAll()
         local err
         data, err = ParseKeyValues( self.file_cache )
         if not data then
-            return error( "could not parse file for '" .. self.table_name .. "' error is: " .. err )
+            return error( "data table for '" .. datatable.table_name .. "' corrupt, error is: " .. err )
         end
 
     else
