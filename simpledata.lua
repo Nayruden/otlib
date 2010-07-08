@@ -33,6 +33,10 @@ DatabaseTypes = {
 }
 ]]
 
+--- Object: DataTable
+local DataTable = object:Clone()
+local datatable_cache = {}
+
 --- Variable: preferred_database_type
 --- The *<DatabaseTypes>* to use by default.
 preferred_database_type = DatabaseTypes.Flatfile
@@ -50,10 +54,6 @@ local function normalizeType( typ )
     end
 end
 
---- Object: DataTable
-local DataTable = object:Clone()
-local datatable_cache = {}
-
 --[[
     Function: CreateDataTable
 
@@ -67,8 +67,8 @@ local datatable_cache = {}
         primary_key_type - The *string* of the type for the primary key of the table. For more
             information see <DataTable.AddKey>.
         comment - The *optional string* of the comment to use for the primary key.
-        database_type - The *optional <DatabaseTypes>* to use for this table. Defaults to the value
-            of _<preferred_database_type>_.
+        database_type - The *optional <otlib.DatabaseTypes>* to use for this table. Defaults to the 
+            value of _<preferred_database_type>_.
 
     Returns:
 
@@ -437,7 +437,7 @@ end
     Function: Datatable.UntrackedCopy
 
     One of the downsides of using <DataTable> is that data you get out of it (except 
-    <DataTable.GetAll>) can't be thrown throw an iterator like pairs because of the way we track
+    <Datatable.GetAll>) can't be thrown throw an iterator like pairs because of the way we track
     changes to the table. To help alleviate this problem, you can create an untracked copy of the
     data using this function.
 
@@ -474,7 +474,7 @@ end
 
     Parameters:
 
-        database_type - The destination *<DatabaseTypes>*.
+        database_type - The destination *<otlib.DatabaseTypes>*.
 
     Returns:
 
