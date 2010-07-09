@@ -169,6 +169,7 @@ end
 ]]
 InvalidCondition.AccessDenied           = InvalidCondition( "access denied" )
 InvalidCondition.MissingRequiredParam   = InvalidCondition( "argument is required and was left unspecified" )
+InvalidCondition.TooManyParams          = InvalidCondition( "too many arguments specified" )
 InvalidCondition.TooHigh                = InvalidCondition( "specified number %i is above your allowed maximum of %i" )
 InvalidCondition.TooLow                 = InvalidCondition( "specified number %i is below your allowed minimum of %i" )
 InvalidCondition.InvalidNumber          = InvalidCondition( "invalid number \"%s\" specified" )
@@ -340,19 +341,46 @@ function group:CheckAccess( access, ... )
         return false, InvalidCondition.AccessDenied():SetLevel( InvalidCondition.DeniedLevel.NoAccess )
     end
     
-    local args = { ... }
-    for i=1, #access.params do
-        local status, err = access.params[ i ]:IsValid( self, args[ i ] )
+    local argv = { ... }
+    local num_access_params = #access.params
+    for i=1, math.max( #argv, num_access_params ) do
+        local arg = argv[ i ]
+        local access_index
+        if access.params[ i ] then -- Standard
+            access_index = i
+            
+            if access.params[ access_index ]:GetTakesRestOfLine() then
+                local new_argv = { select( i, unpack( argv ) ) }
+                arg = table.concat( new_argv, " " )
+            end
+        elseif access.params[ num_access_params ]:GetMaxRepeats() > 1 + i - num_access_params then -- Repeating
+            access_index = num_access_params
+        else -- Too many!
+            return false, InvalidCondition.TooManyParams():SetLevel( InvalidCondition.DeniedLevel.Parameters ):SetParameterNum( i )
+        end
+        
+        local parsed_arg, err = access.params[ access_index ]:Parse( self, arg )
+        if err then
+            return false, err:SetLevel( InvalidCondition.DeniedLevel.Parameters ):SetParameterNum( i )
+        end
+        
+        -- Test against the hard-limits
+        local status, err = access.params[ access_index ]:IsValid( self, parsed_arg )
         if not status then
             return false, err:SetLevel( InvalidCondition.DeniedLevel.Parameters ):SetParameterNum( i )
         end
         
         -- If the permission isn't true it must be a derived permission
         if permission ~= true then
-            status, err = permission.params[ i ]:IsValid( self, args[ i ] )
+            status, err = permission.params[ access_index ]:IsValid( self, parsed_arg )
             if not status then
                 return false, err:SetLevel( InvalidCondition.DeniedLevel.UserParameters ):SetParameterNum( i )
             end
+        end
+        
+        if access.params[ access_index ]:GetTakesRestOfLine() then
+            -- That's all, folks
+            break
         end
     end
     

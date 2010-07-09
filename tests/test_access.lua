@@ -9,6 +9,7 @@ superadmin  = admin:CreateClonedGroup( "superadmin" )
 -- Simple permission
 slap = otlib.access:Register( "slap", admin )
 slap:AddParam( otlib.NumParam():Min( 0 ):Max( 100 ) )
+slap:AddParam( otlib.NumParam():Min( 0 ):Max( 10 ):MinRepeats( 0 ) )
 
 -- A user with access
 user1 = admin:CreateClonedUser( "123" )
@@ -45,6 +46,10 @@ function TestBasicAccess()
     AssertEquals( has_access, true )
     AssertEquals( condition, nil )
     
+    has_access, condition = user1:CheckAccess( slap, "0" )
+    AssertEquals( has_access, true )
+    AssertEquals( condition, nil )
+    
     has_access, condition = user1:CheckAccess( slap, 41 )
     AssertEquals( has_access, true )
     AssertEquals( condition, nil )
@@ -59,9 +64,22 @@ function TestBasicAccess()
     AssertEquals( condition:IsA( otlib.InvalidCondition.MissingRequiredParam ), true )
     AssertEquals( condition:GetLevel(), otlib.InvalidCondition.DeniedLevel.Parameters )
     AssertEquals( condition:GetParameterNum(), 1 )
+    
+    -- Too many args
+    has_access, condition = user1:CheckAccess( slap, 10, 10, 5 )
+    AssertEquals( has_access, false )
+    AssertEquals( condition:IsA( otlib.InvalidCondition.TooManyParams ), true )
+    AssertEquals( condition:GetLevel(), otlib.InvalidCondition.DeniedLevel.Parameters )
+    AssertEquals( condition:GetParameterNum(), 3 )
 
     -- Too high
     has_access, condition = user1:CheckAccess( slap, 101 )
+    AssertEquals( has_access, false )
+    AssertEquals( condition:IsA( otlib.InvalidCondition.TooHigh ), true )
+    AssertEquals( condition:GetLevel(), otlib.InvalidCondition.DeniedLevel.Parameters )
+    AssertEquals( condition:GetParameterNum(), 1 )
+    
+    has_access, condition = user1:CheckAccess( slap, "101" )
     AssertEquals( has_access, false )
     AssertEquals( condition:IsA( otlib.InvalidCondition.TooHigh ), true )
     AssertEquals( condition:GetLevel(), otlib.InvalidCondition.DeniedLevel.Parameters )
@@ -96,6 +114,13 @@ function TestOverriddenAccess()
     AssertEquals( condition:IsA( otlib.InvalidCondition.MissingRequiredParam ), true )
     AssertEquals( condition:GetLevel(), otlib.InvalidCondition.DeniedLevel.Parameters )
     AssertEquals( condition:GetParameterNum(), 1 )
+    
+    -- Too many args
+    has_access, condition = user3:CheckAccess( slap, 10, 10, 5 )
+    AssertEquals( has_access, false )
+    AssertEquals( condition:IsA( otlib.InvalidCondition.TooManyParams ), true )
+    AssertEquals( condition:GetLevel(), otlib.InvalidCondition.DeniedLevel.Parameters )
+    AssertEquals( condition:GetParameterNum(), 3 )
 
     -- Too high
     has_access, condition = user3:CheckAccess( slap, 51 )
