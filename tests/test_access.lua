@@ -22,117 +22,58 @@ user3 = superadmin:CreateClonedUser( "213" )
 local access = user3:Allow( slap )
 access:ModifyParam( 1 ):Min( -50 ):Max( 50 )
 
+local function ensureAccess( user, access, ... )
+    local has_access, condition = user:CheckAccess( access, ... )
+    AssertEquals( has_access, true )
+    AssertEquals( condition, nil )
+end
+
+local function ensureNoAccess( user, access, typ, level, param_num, ... )
+    local has_access, condition = user:CheckAccess( access, ... )
+    AssertEquals( has_access, false )
+    AssertEquals( condition:IsA( typ ), true )
+    AssertEquals( condition:GetLevel(), level )
+    AssertEquals( condition:GetParameterNum(), param_num )
+end
+
+local function runFullTest( user, access, low, low_level, high, high_level )    
+    ensureAccess( user, access, low )
+    ensureAccess( user, access, tostring( low ) )
+    
+    local mid = math.ceil( (high + low) / 2 )
+    ensureAccess( user, access, mid )
+    ensureAccess( user, access, tostring( mid ) )
+    
+    ensureAccess( user, access, high )
+    ensureAccess( user, access, tostring( high ) )
+
+    -- Missing required arg
+    ensureNoAccess( user, access, otlib.InvalidCondition.MissingRequiredParam, otlib.InvalidCondition.DeniedLevel.Parameters, 1 )
+    
+    -- Too many args
+    ensureNoAccess( user, access, otlib.InvalidCondition.TooManyParams, otlib.InvalidCondition.DeniedLevel.Parameters, 3, 10, 5, 30 )
+
+    -- Too high
+    ensureNoAccess( user, access, otlib.InvalidCondition.TooHigh, high_level, 1, high+1 )
+    ensureNoAccess( user, access, otlib.InvalidCondition.TooHigh, high_level, 1, tostring( high+1 ) )
+
+    -- Too low
+    ensureNoAccess( user, access, otlib.InvalidCondition.TooLow, low_level, 1, low-1 )
+    ensureNoAccess( user, access, otlib.InvalidCondition.TooLow, low_level, 1, tostring( low-1 ) )
+end
+
 function TestNoAccess()
-    local has_access, condition
-    
-    -- Make sure the access fails first on just 'no access' for this user
-    has_access, condition = user2:CheckAccess( slap, 600 )
-    AssertEquals( has_access, false )
-    AssertEquals( condition:IsA( otlib.InvalidCondition.AccessDenied ), true )
-    AssertEquals( condition:GetLevel(), otlib.InvalidCondition.DeniedLevel.NoAccess )
-    AssertEquals( condition:GetParameterNum(), nil )
-    
-    has_access, condition = user2:CheckAccess( slap )
-    AssertEquals( has_access, false )
-    AssertEquals( condition:IsA( otlib.InvalidCondition.AccessDenied ), true )
-    AssertEquals( condition:GetLevel(), otlib.InvalidCondition.DeniedLevel.NoAccess )
-    AssertEquals( condition:GetParameterNum(), nil )
+    ensureNoAccess( user2, slap, otlib.InvalidCondition.AccessDenied, otlib.InvalidCondition.DeniedLevel.NoAccess, nil )
+    ensureNoAccess( user2, slap, otlib.InvalidCondition.AccessDenied, otlib.InvalidCondition.DeniedLevel.NoAccess, nil, 10 )
+    ensureNoAccess( user2, slap, otlib.InvalidCondition.AccessDenied, otlib.InvalidCondition.DeniedLevel.NoAccess, nil, "10" )
+    ensureNoAccess( user2, slap, otlib.InvalidCondition.AccessDenied, otlib.InvalidCondition.DeniedLevel.NoAccess, nil, 101 )
+    ensureNoAccess( user2, slap, otlib.InvalidCondition.AccessDenied, otlib.InvalidCondition.DeniedLevel.NoAccess, nil, "101" )
 end
 
 function TestBasicAccess()
-    local has_access, condition
-    
-    has_access, condition = user1:CheckAccess( slap, 0 )
-    AssertEquals( has_access, true )
-    AssertEquals( condition, nil )
-    
-    has_access, condition = user1:CheckAccess( slap, "0" )
-    AssertEquals( has_access, true )
-    AssertEquals( condition, nil )
-    
-    has_access, condition = user1:CheckAccess( slap, 41 )
-    AssertEquals( has_access, true )
-    AssertEquals( condition, nil )
-
-    has_access, condition = user1:CheckAccess( slap, 100 )
-    AssertEquals( has_access, true )
-    AssertEquals( condition, nil )
-
-    -- Missing required arg
-    has_access, condition = user1:CheckAccess( slap )
-    AssertEquals( has_access, false )
-    AssertEquals( condition:IsA( otlib.InvalidCondition.MissingRequiredParam ), true )
-    AssertEquals( condition:GetLevel(), otlib.InvalidCondition.DeniedLevel.Parameters )
-    AssertEquals( condition:GetParameterNum(), 1 )
-    
-    -- Too many args
-    has_access, condition = user1:CheckAccess( slap, 10, 10, 5 )
-    AssertEquals( has_access, false )
-    AssertEquals( condition:IsA( otlib.InvalidCondition.TooManyParams ), true )
-    AssertEquals( condition:GetLevel(), otlib.InvalidCondition.DeniedLevel.Parameters )
-    AssertEquals( condition:GetParameterNum(), 3 )
-
-    -- Too high
-    has_access, condition = user1:CheckAccess( slap, 101 )
-    AssertEquals( has_access, false )
-    AssertEquals( condition:IsA( otlib.InvalidCondition.TooHigh ), true )
-    AssertEquals( condition:GetLevel(), otlib.InvalidCondition.DeniedLevel.Parameters )
-    AssertEquals( condition:GetParameterNum(), 1 )
-    
-    has_access, condition = user1:CheckAccess( slap, "101" )
-    AssertEquals( has_access, false )
-    AssertEquals( condition:IsA( otlib.InvalidCondition.TooHigh ), true )
-    AssertEquals( condition:GetLevel(), otlib.InvalidCondition.DeniedLevel.Parameters )
-    AssertEquals( condition:GetParameterNum(), 1 )
-
-    -- Too low
-    has_access, condition = user1:CheckAccess( slap, -1 )
-    AssertEquals( has_access, false )
-    AssertEquals( condition:IsA( otlib.InvalidCondition.TooLow ), true )
-    AssertEquals( condition:GetLevel(), otlib.InvalidCondition.DeniedLevel.Parameters )
-    AssertEquals( condition:GetParameterNum(), 1 )
+    runFullTest( user1, slap, 0, otlib.InvalidCondition.DeniedLevel.Parameters, 100, otlib.InvalidCondition.DeniedLevel.Parameters )
 end
 
 function TestOverriddenAccess()
-    local has_access, condition
-    
-    has_access, condition = user3:CheckAccess( slap, 0 )
-    AssertEquals( has_access, true )
-    AssertEquals( condition, nil )
-    
-    has_access, condition = user3:CheckAccess( slap, 41 )
-    AssertEquals( has_access, true )
-    AssertEquals( condition, nil )
-
-    has_access, condition = user3:CheckAccess( slap, 50 )
-    AssertEquals( has_access, true )
-    AssertEquals( condition, nil )
-
-    -- Missing required arg
-    has_access, condition = user3:CheckAccess( slap )
-    AssertEquals( has_access, false )
-    AssertEquals( condition:IsA( otlib.InvalidCondition.MissingRequiredParam ), true )
-    AssertEquals( condition:GetLevel(), otlib.InvalidCondition.DeniedLevel.Parameters )
-    AssertEquals( condition:GetParameterNum(), 1 )
-    
-    -- Too many args
-    has_access, condition = user3:CheckAccess( slap, 10, 10, 5 )
-    AssertEquals( has_access, false )
-    AssertEquals( condition:IsA( otlib.InvalidCondition.TooManyParams ), true )
-    AssertEquals( condition:GetLevel(), otlib.InvalidCondition.DeniedLevel.Parameters )
-    AssertEquals( condition:GetParameterNum(), 3 )
-
-    -- Too high
-    has_access, condition = user3:CheckAccess( slap, 51 )
-    AssertEquals( has_access, false )
-    AssertEquals( condition:IsA( otlib.InvalidCondition.TooHigh ), true )
-    AssertEquals( condition:GetLevel(), otlib.InvalidCondition.DeniedLevel.UserParameters )
-    AssertEquals( condition:GetParameterNum(), 1 )
-
-    -- Too low
-    has_access, condition = user3:CheckAccess( slap, -1 )
-    AssertEquals( has_access, false )
-    AssertEquals( condition:IsA( otlib.InvalidCondition.TooLow ), true )
-    AssertEquals( condition:GetLevel(), otlib.InvalidCondition.DeniedLevel.Parameters )
-    AssertEquals( condition:GetParameterNum(), 1 )
+    runFullTest( user3, slap, 0, otlib.InvalidCondition.DeniedLevel.Parameters, 50, otlib.InvalidCondition.DeniedLevel.UserParameters )
 end

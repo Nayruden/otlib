@@ -88,7 +88,7 @@ end
         v1.00 - Initial.
 ]]
 function Trim( str )
-    return str:match( "^()%s*$" ) and '' or str:match( "^%s*(.*%S)" )
+    return str:match( "^()%s*$" ) and "" or str:match( "^%s*(.*%S)" )
 end
 
 
@@ -103,7 +103,7 @@ end
         v1.00 - Initial.
 ]]
 function LTrim( str )
-    return (str:gsub( "^%s*", '' ))
+    return (str:gsub( "^%s*", "" ))
 end
 
 

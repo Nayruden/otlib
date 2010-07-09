@@ -76,7 +76,7 @@ function AssertEquals(actual, expected)
 			errorMsg = "expected: "..wrapValue(expected)..", actual: "..wrapValue(actual)
 		end
 		print (errorMsg)
-		error( errorMsg, 2 )
+        error( errorMsg, 2 )
 	end
 end
 
@@ -351,11 +351,11 @@ LuaUnit = {
 		end
 
 		local function err_handler(e)
-			return e..'\n'..debug.traceback()
+			return debug.traceback( e, 4 )
 		end
 
 		-- run testMethod()
-        ok, errorMsg = pcall( aMethod, err_handler )
+        ok, errorMsg = xpcall( aMethod, err_handler )
 		if not ok then
 			errorMsg  = self.strip_luaunit_stack(errorMsg)
 			LuaUnit.result:addFailure( errorMsg )

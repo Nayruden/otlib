@@ -1035,7 +1035,7 @@ function ParseKeyValues( str )
     
     for i=1, #lines do
         local line = Trim( lines[ i ] )
-        if line ~= '' then
+        if line ~= "" then
             local argv = readArgs( line )
             local key, value = argv[ 1 ], argv[ 2 ]
             if key == '{' then
