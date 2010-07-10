@@ -91,8 +91,9 @@ function wrappers.AffectedRows()
     return affected_count
 end
 
-function wrappers.FileExists( file_name )
-    local f = io.open( file_name )
+require( "lfs" )
+function wrappers.FileExists( file_path )
+    local f = io.open( file_path )
     if f ~= nil then
         io.close( f )
         return true
@@ -101,21 +102,55 @@ function wrappers.FileExists( file_name )
     end
 end
 
-function wrappers.FileRead( file_name )
-    local f = io.open( file_name )
+function wrappers.FileRead( file_path )
+    local f = io.open( file_path )
     assert( f )
     local str = f:read( "*a" )
     io.close( f )
     return str
 end
 
-function wrappers.FileWrite( file_name, data )
-    local f = io.open( file_name, "w+" )
+function wrappers.FileWrite( file_path, data )
+    local f = io.open( file_path, "w+" )
     assert( f )
     f:write( data )
     io.close( f )
 end
 
-function wrappers.FileDelete( file_name )
-    os.remove( file_name )
+function wrappers.FileDelete( file_path )
+    os.remove( file_path )
+end
+
+function wrappers.FilesInDir( dir_path )
+    local files = {}
+    for file in lfs.dir( dir_path ) do
+        if not DataEqualsAnyOf( file, ".", ".." ) then
+            table.insert( files, file )
+        end
+    end
+    
+    return files
+end
+
+local to_route = {}
+
+local function callback_router( user, command, argv )
+    assert( to_route[ command ] )
+    local data = to_route[ command ]
+    local has_access, ret = user:CheckAccess( data.access, unpack( argv ) )
+    if not has_access then
+        print( ('Command %q, argument #%i: %s'):format( command, ret:GetParameterNum(), ret:GetMessage() ) )
+    else
+        params = Append( data.extra_data, ret )
+        data.callback( unpack( params ) )
+    end
+end
+
+function wrappers.AddConsoleCommand( command_name, callback, access, ... )
+    to_route[ command_name ] = { callback=callback, access=access, extra_data={ ... } }
+    commands[ command_name ] = callback_router
+end
+
+function wrappers.AddSayCommand( command_name, callback, access, ... )
+    print( "ignoring say command '" .. command_name .. "'" )
 end

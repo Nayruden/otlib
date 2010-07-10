@@ -10,6 +10,7 @@ dofile( "debug.lua" )
 dofile( "parameters.lua" )
 dofile( "wrappers.lua" )
 dofile( "simpledata.lua" )
+dofile( "plugins.lua" )
 
 --- Module: otlib
 module( "otlib", package.seeall )

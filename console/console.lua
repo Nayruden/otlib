@@ -1,14 +1,33 @@
 dofile( "init.lua" )
 dofile( "console/wrappers.lua" )
 
-local commands = {}
+commands = {}
 
+-- Initialize
+
+do
+    -- Setup a simple group ladder
+    user            = otlib.group:CreateClonedGroup( "user" ) -- Root group
+    operator        = user:CreateClonedGroup( "operator" )
+    admin           = operator:CreateClonedGroup( "admin" )
+    superadmin      = admin:CreateClonedGroup( "superadmin" )
+    
+    console_user    = superadmin:CreateClonedUser( "console" )
+    
+    local plugin_files = otlib.wrappers.FilesInDir( "plugins" )
+    for i=1, #plugin_files do
+        dofile( "plugins/" .. plugin_files[ i ] )
+    end
+    otlib.InitPlugins()
+end
+
+-- Main logic loop
 local line = io.read()
 while line do
     local argv = otlib.ParseArgs( line )
     local command = table.remove( argv, 1 )
     if commands[ command ] then
-        commands[ command ]( nil, command, argv )
+        commands[ command ]( console_user, command, argv )
     else
         print( "unknown command: " .. command )
     end

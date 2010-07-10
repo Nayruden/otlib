@@ -22,10 +22,14 @@ user3 = superadmin:CreateClonedUser( "213" )
 local access = user3:Allow( slap )
 access:ModifyParam( 1 ):Min( -50 ):Max( 50 )
 
+-- Another user with denied access
+user4 = superadmin:CreateClonedUser( "user4" )
+user4:Deny( slap )
+
 local function ensureAccess( user, access, ... )
     local has_access, condition = user:CheckAccess( access, ... )
     AssertEquals( has_access, true )
-    AssertEquals( condition, nil )
+    -- AssertEquals( condition, nil ) -- TODO?
 end
 
 local function ensureNoAccess( user, access, typ, level, param_num, ... )
@@ -68,6 +72,12 @@ function TestNoAccess()
     ensureNoAccess( user2, slap, otlib.InvalidCondition.AccessDenied, otlib.InvalidCondition.DeniedLevel.NoAccess, nil, "10" )
     ensureNoAccess( user2, slap, otlib.InvalidCondition.AccessDenied, otlib.InvalidCondition.DeniedLevel.NoAccess, nil, 101 )
     ensureNoAccess( user2, slap, otlib.InvalidCondition.AccessDenied, otlib.InvalidCondition.DeniedLevel.NoAccess, nil, "101" )
+    
+    ensureNoAccess( user4, slap, otlib.InvalidCondition.AccessDenied, otlib.InvalidCondition.DeniedLevel.NoAccess, nil )
+    ensureNoAccess( user4, slap, otlib.InvalidCondition.AccessDenied, otlib.InvalidCondition.DeniedLevel.NoAccess, nil, 10 )
+    ensureNoAccess( user4, slap, otlib.InvalidCondition.AccessDenied, otlib.InvalidCondition.DeniedLevel.NoAccess, nil, "10" )
+    ensureNoAccess( user4, slap, otlib.InvalidCondition.AccessDenied, otlib.InvalidCondition.DeniedLevel.NoAccess, nil, 101 )
+    ensureNoAccess( user4, slap, otlib.InvalidCondition.AccessDenied, otlib.InvalidCondition.DeniedLevel.NoAccess, nil, "101" )
 end
 
 function TestBasicAccess()

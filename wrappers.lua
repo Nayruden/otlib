@@ -123,7 +123,7 @@ end
 
     Parameters:
 
-        file_name - The file name *string*.
+        file_path - The file path *string*.
 
     Returns:
 
@@ -133,7 +133,7 @@ end
 
         v1.00 - Initial.
 ]]
-function FileExists( file_name )
+function FileExists( file_path )
     error( "unimplemented", 2 )
 end
 
@@ -145,7 +145,7 @@ end
 
     Parameters:
 
-        file_name - The file name *string*.
+        file_path - The file path *string*.
 
     Returns:
 
@@ -155,7 +155,7 @@ end
 
         v1.00 - Initial.
 ]]
-function FileRead( file_name )
+function FileRead( file_path )
     error( "unimplemented", 2 )
 end
 
@@ -167,14 +167,14 @@ end
 
     Parameters:
 
-        file_name - The file name *string*.
+        file_path - The file path *string*.
         data - The *string* to write to the file.
 
     Revisions:
 
         v1.00 - Initial.
 ]]
-function FileWrite( file_name, data )
+function FileWrite( file_path, data )
     error( "unimplemented", 2 )
 end
 
@@ -186,12 +186,28 @@ end
 
     Parameters:
 
-        file_name - The file name *string*.
+        file_path - The file or folder path *string*.
 
     Revisions:
 
         v1.00 - Initial.
 ]]
-function FileDelete( file_name )
+function FileDelete( file_path )
+    error( "unimplemented", 2 )
+end
+
+-- TODO, and is this needed?
+function wrappers.FilesInDir( dir_path )
+    error( "unimplemented", 2 )
+end
+
+
+--- Group: Command Wrappers
+
+function AddConsoleCommand( command_name, callback, access, ... )
+    error( "unimplemented", 2 )
+end
+
+function AddSayCommand( command_name, callback, access, ... )
     error( "unimplemented", 2 )
 end

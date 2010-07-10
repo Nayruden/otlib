@@ -1,4 +1,5 @@
 --- File: Access
+-- TODO: Create... something... to allow consoles full access no matter what permissions are
 
 --- Module: otlib
 module( "otlib", package.seeall )
@@ -244,6 +245,7 @@ end
 
 local groups = {}
 
+
 --[[
     Function: GetGroup
 ]]
@@ -256,22 +258,23 @@ end
 ]]
 group = object:Clone()
 group.allow = object:Clone()
+group.deny = object:Clone()
 
 function group:CreateClonedGroup( name )
     local new = self:Clone()
     groups[ name ] = new
     new.allow = self.allow:Clone()
+    new.deny = self.deny:Clone()
     
     return new
 end
 
 --- Group: User Access
 
-local alias_to_user = {}
-
 function group:CreateClonedUser( ... )
     local new = self:Clone()
     new.allow = self.allow:Clone()
+    new.deny = self.deny:Clone()
     new.aliases = {}
     local aliases = { ... }
     for i=1, #aliases do
@@ -282,13 +285,8 @@ function group:CreateClonedUser( ... )
 end
 
 function group:RegisterAlias( alias )
-    if not HasValueI( self.aliases, alias ) then
-        if alias_to_user[ alias ] then
-            -- return error( "tried to re-register existing alias '" .. alias .. "'" ) -- TODO, readd
-        end
-        
+    if not HasValueI( self.aliases, alias ) then        
         table.insert( self.aliases, alias )
-        alias_to_user[ alias ] = self
     end
     
     return self
@@ -301,16 +299,16 @@ function group:Allow( access )
     return new
 end
 
--- Future note:
--- Args are already parsed at this point... this makes it easy to do something like
--- checking if someone has access to physgun another player, since you already have
--- the parsed objects. Find a place to put parsing logic that makes sense!
+function group:Deny( access )
+    self.deny[ access ] = true
+end
 
 --[[
     Function: CheckAccess
     
-    Checks if a user or group can use an access with specified, parsed arguments. 'Parsed 
-    arguments' simply means that numbers should come in as number types, bools as bools, etc.
+    Checks if a user or group can use an access with specified, possibly parsed arguments. 
+    'Possibly parsed arguments' simply means that numbers should come in as number or string types,
+    bools as bools or strings, etc.
 
     Parameters:
 
@@ -322,7 +320,7 @@ end
         1 - A *boolean* of whether or not they have permission to the <access> object taking the
             specified parameters into account.
         2 - An *<InvalidCondition> object* if they don't have permission, *nil* if they do. The 
-            object is passed back to specify why they don't have access.
+            object is passed back to specify why they don't have access. TODO
             
     Notes:
     
@@ -337,11 +335,12 @@ end
 ]]
 function group:CheckAccess( access, ... )
     local permission = self.allow[ access ]
-    if not permission then
+    if not permission or self.deny[ access ] then
         return false, InvalidCondition.AccessDenied():SetLevel( InvalidCondition.DeniedLevel.NoAccess )
     end
     
     local argv = { ... }
+    local parsed_argv = {}
     local num_access_params = #access.params
     for i=1, math.max( #argv, num_access_params ) do
         local arg = argv[ i ]
@@ -364,7 +363,7 @@ function group:CheckAccess( access, ... )
             return false, err:SetLevel( InvalidCondition.DeniedLevel.Parameters ):SetParameterNum( i )
         end
         
-        -- Test against the hard-limits
+        -- Test against the hard-programmed limits
         local status, err = access.params[ access_index ]:IsValid( self, parsed_arg )
         if not status then
             return false, err:SetLevel( InvalidCondition.DeniedLevel.Parameters ):SetParameterNum( i )
@@ -378,27 +377,12 @@ function group:CheckAccess( access, ... )
             end
         end
         
+        table.insert( parsed_argv, parsed_arg )
+        
         if access.params[ access_index ]:GetTakesRestOfLine() then
-            -- That's all, folks
-            break
+            break -- That's all, folks
         end
     end
     
-    return true
-end
-
---- Module: otlib
-
---[[
-    Function: UserFromID
-]]
-function UserFromID( id )
-    return alias_to_user[ id ]
-end
-
---[[
-    Function: CheckAccess
-]]
-function CheckAccess( id, access, ... )
-    return UserFromID( id ):CheckAccess( access, ... )
+    return true, parsed_argv
 end
