@@ -174,6 +174,7 @@ InvalidCondition.TooManyParams          = InvalidCondition( "too many arguments 
 InvalidCondition.TooHigh                = InvalidCondition( "specified number %i is above your allowed maximum of %i" )
 InvalidCondition.TooLow                 = InvalidCondition( "specified number %i is below your allowed minimum of %i" )
 InvalidCondition.InvalidNumber          = InvalidCondition( "invalid number \"%s\" specified" )
+InvalidCondition.InvalidString          = InvalidCondition( "invalid string \"%s\" specified" )
 
 --- Section: Access Registration
 
@@ -187,6 +188,7 @@ local registered_tags = {}
     actions such as the ability to hear admins' private chat.
 ]]
 access = object:Clone()
+
 
 --[[
     Function: Register
@@ -210,12 +212,10 @@ function access:Register( tag, ... )
     local new = self:Clone()
     new.params = {}
     
-    --if not registered_tags[ tag ] then
-        local groups = { ... }
-        for i=1, #groups do
-            groups[ i ].allow[ new ] = true
-        end
-    --end
+    local groups = { ... }
+    for i=1, #groups do
+        groups[ i ].allow[ new ] = true
+    end
     
     registered_tags[ tag ] = true
     -- TODO: Persist registered_tags
@@ -348,7 +348,7 @@ function group:CheckAccess( access, ... )
         if access.params[ i ] then -- Standard
             access_index = i
             
-            if access.params[ access_index ]:GetTakesRestOfLine() then
+            if access.params[ access_index ]:GetTakesRestOfLine() and #argv > i then
                 local new_argv = { select( i, unpack( argv ) ) }
                 arg = table.concat( new_argv, " " )
             end

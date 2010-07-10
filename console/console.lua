@@ -16,8 +16,16 @@ do
     
     local plugin_files = otlib.wrappers.FilesInDir( "plugins" )
     for i=1, #plugin_files do
-        dofile( "plugins/" .. plugin_files[ i ] )
+        PLUGIN_PATH = "plugins/" .. plugin_files[ i ]
+        dofile( PLUGIN_PATH )
     end
+    
+    local plugin_files = otlib.wrappers.FilesInDir( "console/plugins" )
+    for i=1, #plugin_files do
+        PLUGIN_PATH = "console/plugins/" .. plugin_files[ i ]
+        dofile( PLUGIN_PATH )
+    end
+    PLUGIN_PATH = nil
     otlib.InitPlugins()
 end
 

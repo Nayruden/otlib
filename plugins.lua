@@ -14,6 +14,7 @@ end
 function InitPlugins()
     for plugin_name, plugin in pairs( plugins ) do
         plugin:Init()
+        plugin:Start()
     end
 end
 
@@ -25,12 +26,14 @@ function CreatePlugin( name, description, author )
     local plugin = Plugin:Clone()
     if plugins[ name ] then
         plugin = plugins[ name ]
+    else
+        assert( PLUGIN_PATH )
+        plugin.path = PLUGIN_PATH
     end
     
     plugin.name = name
     plugin.description = description
     plugin.author = author
-    plugin.enabled = true
     plugin.console_commands = {}
     plugin.say_commands = {}
     plugin.hooks = {}
@@ -46,24 +49,35 @@ function Plugin:SetVersion( version )
     return self
 end
 
-function Plugin:SetEnabled( enabled )
-    self.enabled = enabled
-end
-
 function Plugin:Init()
-    if self.enabled then
-        for command_name, command_data in pairs( self.console_commands ) do
-            wrappers.AddConsoleCommand( command_name, command_data.callback, command_data.access, self )
-        end
-    
-        for command_name, command_data in pairs( self.say_commands ) do
-            wrappers.AddSayCommand( command_name, command_data.callback, command_data.access, self )
-        end
-    end
+    -- Empty implementation
 end
 
-function Plugin:Reload()
-    self:Init()
+function Plugin:Start()
+    for command_name, command_data in pairs( self.console_commands ) do
+        wrappers.AddConsoleCommand( command_name, command_data.callback, command_data.access, self )
+    end
+
+    for command_name, command_data in pairs( self.say_commands ) do
+        wrappers.AddSayCommand( command_name, command_data.callback, command_data.access, self )
+    end
+    
+    self.running = true
+    
+    -- todo hooks
+end
+
+function Plugin:Stop()
+    for command_name, command_data in pairs( self.console_commands ) do
+        wrappers.RemoveConsoleCommand( command_name )
+    end
+
+    for command_name, command_data in pairs( self.say_commands ) do
+        wrappers.RemoveSayCommand( command_name )
+    end
+    
+    self.running = nil
+    -- todo hooks
 end
 
 function Plugin:AddCommand( console_command, say_command, callback, access )

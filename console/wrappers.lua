@@ -139,9 +139,15 @@ local function callback_router( user, command, argv )
     local data = to_route[ command ]
     local has_access, ret = user:CheckAccess( data.access, unpack( argv ) )
     if not has_access then
-        print( ('Command %q, argument #%i: %s'):format( command, ret:GetParameterNum(), ret:GetMessage() ) )
+        if ret:GetParameterNum() then
+            print( ('Command %q, argument #%i: %s'):format( command, ret:GetParameterNum(), ret:GetMessage() ) )
+        else
+            print( ('Command %q: %s'):format( command, ret:GetMessage() ) )
+        end
     else
-        params = Append( data.extra_data, ret )
+        local params = CopyI( data.extra_data )
+        table.insert( params, user )
+        Append( params, ret, true )
         data.callback( unpack( params ) )
     end
 end
@@ -152,5 +158,15 @@ function wrappers.AddConsoleCommand( command_name, callback, access, ... )
 end
 
 function wrappers.AddSayCommand( command_name, callback, access, ... )
-    print( "ignoring say command '" .. command_name .. "'" )
+    print( "ignoring say command addition '" .. command_name .. "'" )
 end
+
+function wrappers.RemoveConsoleCommand( command_name )
+    to_route[ command_name ] = nil
+    commands[ command_name ] = nil
+end
+
+function wrappers.RemoveSayCommand( command_name )
+    print( "ignoring say command removal '" .. command_name .. "'" )
+end
+

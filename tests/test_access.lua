@@ -9,7 +9,10 @@ superadmin  = admin:CreateClonedGroup( "superadmin" )
 -- Simple permission
 slap = otlib.access:Register( "slap", admin )
 slap:AddParam( otlib.NumParam():Min( 0 ):Max( 100 ) )
-slap:AddParam( otlib.NumParam():Min( 0 ):Max( 10 ):MinRepeats( 0 ) )
+slap:AddParam( otlib.NumParam():Min( 0 ):Max( 10 ):MinRepeats( 0 ):Default( 1 ) )
+
+say = otlib.access:Register( "say", admin )
+say:AddParam( otlib.StringParam():TakesRestOfLine( true ) )
 
 -- A user with access
 user1 = admin:CreateClonedUser( "123" )
@@ -26,10 +29,10 @@ access:ModifyParam( 1 ):Min( -50 ):Max( 50 )
 user4 = superadmin:CreateClonedUser( "user4" )
 user4:Deny( slap )
 
-local function ensureAccess( user, access, ... )
-    local has_access, condition = user:CheckAccess( access, ... )
+local function ensureAccess( user, access, should_ret, ... )
+    local has_access, ret = user:CheckAccess( access, ... )
     AssertEquals( has_access, true )
-    -- AssertEquals( condition, nil ) -- TODO?
+    AssertTablesEqual( should_ret, ret )
 end
 
 local function ensureNoAccess( user, access, typ, level, param_num, ... )
@@ -40,16 +43,19 @@ local function ensureNoAccess( user, access, typ, level, param_num, ... )
     AssertEquals( condition:GetParameterNum(), param_num )
 end
 
-local function runFullTest( user, access, low, low_level, high, high_level )    
-    ensureAccess( user, access, low )
-    ensureAccess( user, access, tostring( low ) )
+local function runFullSlapTest( user, low, low_level, high, high_level )    
+    local access = slap
+    ensureAccess( user, access, { low, 1 }, low )
+    ensureAccess( user, access, { low, 1 }, tostring( low ) )
     
     local mid = math.ceil( (high + low) / 2 )
-    ensureAccess( user, access, mid )
-    ensureAccess( user, access, tostring( mid ) )
+    ensureAccess( user, access, { mid, 1 }, mid )
+    ensureAccess( user, access, { mid, 1 }, tostring( mid ) )
     
-    ensureAccess( user, access, high )
-    ensureAccess( user, access, tostring( high ) )
+    ensureAccess( user, access, { high, 1 }, high )
+    ensureAccess( user, access, { high, 1 }, tostring( high ) )
+    
+    ensureAccess( user, access, { high, 5 }, high, 5 )
 
     -- Missing required arg
     ensureNoAccess( user, access, otlib.InvalidCondition.MissingRequiredParam, otlib.InvalidCondition.DeniedLevel.Parameters, 1 )
@@ -64,6 +70,14 @@ local function runFullTest( user, access, low, low_level, high, high_level )
     -- Too low
     ensureNoAccess( user, access, otlib.InvalidCondition.TooLow, low_level, 1, low-1 )
     ensureNoAccess( user, access, otlib.InvalidCondition.TooLow, low_level, 1, tostring( low-1 ) )
+end
+
+local function runFullSayTest( user )
+    local access = say
+    local word = "word"
+    local sentence = "This is a sentence"
+    ensureAccess( user, access, { word }, word )
+    ensureAccess( user, access, { sentence }, sentence )
 end
 
 function TestNoAccess()
@@ -81,9 +95,11 @@ function TestNoAccess()
 end
 
 function TestBasicAccess()
-    runFullTest( user1, slap, 0, otlib.InvalidCondition.DeniedLevel.Parameters, 100, otlib.InvalidCondition.DeniedLevel.Parameters )
+    runFullSlapTest( user1, 0, otlib.InvalidCondition.DeniedLevel.Parameters, 100, otlib.InvalidCondition.DeniedLevel.Parameters )
+    runFullSayTest( user1 )
 end
 
 function TestOverriddenAccess()
-    runFullTest( user3, slap, 0, otlib.InvalidCondition.DeniedLevel.Parameters, 50, otlib.InvalidCondition.DeniedLevel.UserParameters )
+    runFullSlapTest( user3, 0, otlib.InvalidCondition.DeniedLevel.Parameters, 50, otlib.InvalidCondition.DeniedLevel.UserParameters )
+    runFullSayTest( user3 )
 end

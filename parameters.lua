@@ -284,9 +284,7 @@ function NumParam:Parse( user, arg )
 end
 
 function NumParam:IsValid( user, arg )
-    if type( arg ) ~= "number" then
-        return error( "non-number passed to NumParam:IsValid", 2 )
-    end
+    CheckArg( 2, "NumParam:IsValid", "number", arg )
     
     local status, err = BaseParam.IsValid( self, user, arg )
     if not status then
@@ -314,4 +312,40 @@ end
 function NumParam:Max( max )
     self.max = max
     return self
+end
+
+
+StringParam = BaseParam:Clone( true )
+StringParam:Default( "" )
+
+function StringParam:Parse( user, arg )
+    local err
+    arg, err = BaseParam.Parse( self, user, arg )
+    if err then
+        return arg, err
+    end
+    
+    -- This'll *probably* never happen
+    if type( arg ) ~= "string" then
+        return nil, InvalidCondition.InvalidString( tostring( arg ) )
+    end
+    
+    return arg
+end
+
+function StringParam:IsValid( user, arg )
+    CheckArg( 2, "StringParam:IsValid", "string", arg )
+    
+    local status, err = BaseParam.IsValid( self, user, arg )
+    if not status then
+        return status, err
+    end
+    
+    -- TODO string restrictions
+    
+    return true
+end
+
+function StringParam:Autocomplete( user, cmd, arg )
+    error( ErrorMessages.NotImplemented, 2 )
 end

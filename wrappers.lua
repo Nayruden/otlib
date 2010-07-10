@@ -211,3 +211,11 @@ end
 function AddSayCommand( command_name, callback, access, ... )
     error( "unimplemented", 2 )
 end
+
+function RemoveConsoleCommand( command_name )
+    error( "unimplemented", 2 )
+end
+
+function RemoveSayCommand( command_name )
+    error( "unimplemented", 2 )
+end
