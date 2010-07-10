@@ -121,17 +121,6 @@ function wrappers.FileDelete( file_path )
     os.remove( file_path )
 end
 
-function wrappers.FilesInDir( dir_path )
-    local files = {}
-    for file in lfs.dir( dir_path ) do
-        if not DataEqualsAnyOf( file, ".", ".." ) then
-            table.insert( files, file )
-        end
-    end
-    
-    return files
-end
-
 local to_route = {}
 
 local function callback_router( user, command, argv )

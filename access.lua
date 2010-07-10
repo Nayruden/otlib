@@ -303,6 +303,7 @@ function group:Deny( access )
     self.deny[ access ] = true
 end
 
+
 --[[
     Function: CheckAccess
     
@@ -319,8 +320,8 @@ end
 
         1 - A *boolean* of whether or not they have permission to the <access> object taking the
             specified parameters into account.
-        2 - An *<InvalidCondition> object* if they don't have permission, *nil* if they do. The 
-            object is passed back to specify why they don't have access. TODO
+        2 - An *<InvalidCondition> object* if they don't have permission, a *list table* of the
+            parsed arguments if they do.
             
     Notes:
     

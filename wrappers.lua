@@ -196,11 +196,6 @@ function FileDelete( file_path )
     error( "unimplemented", 2 )
 end
 
--- TODO, and is this needed?
-function wrappers.FilesInDir( dir_path )
-    error( "unimplemented", 2 )
-end
-
 
 --- Group: Command Wrappers
 

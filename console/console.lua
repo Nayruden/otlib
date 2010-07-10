@@ -1,5 +1,8 @@
 dofile( "init.lua" )
 dofile( "console/wrappers.lua" )
+dofile( "console/lib.lua" )
+
+module( "otlib", package.seeall )
 
 commands = {}
 
@@ -14,13 +17,7 @@ do
     
     console_user    = superadmin:CreateClonedUser( "console" )
     
-    local plugin_files = otlib.wrappers.FilesInDir( "plugins" )
-    for i=1, #plugin_files do
-        PLUGIN_PATH = "plugins/" .. plugin_files[ i ]
-        dofile( PLUGIN_PATH )
-    end
-    
-    local plugin_files = otlib.wrappers.FilesInDir( "console/plugins" )
+    local plugin_files = FilesInDir( "console/plugins" )
     for i=1, #plugin_files do
         PLUGIN_PATH = "console/plugins/" .. plugin_files[ i ]
         dofile( PLUGIN_PATH )

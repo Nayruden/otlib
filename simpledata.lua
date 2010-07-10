@@ -33,15 +33,14 @@ DatabaseTypes = {
 }
 ]]
 
---- Object: DataTable
-local DataTable = object:Clone()
-local datatable_cache = {}
-
 --- Variable: preferred_database_type
 --- The *<DatabaseTypes>* to use by default.
 preferred_database_type = DatabaseTypes.Flatfile
 local error_key_not_registered = "tried to pass in key '%s' to table '%s', but key was not registered"
 local unknown_database_type = "unknown database type '%s' for table name '%s'"
+
+local DataTable
+local datatable_cache = {}
 
 -- Normalize a type and pass back the sql type and the lua type.
 local function normalizeType( typ )
@@ -104,9 +103,11 @@ function CreateDataTable( table_name, primary_key_name, primary_key_type, commen
     return new_data_table
 end
 
+--- Object: otlib.DataTable
+DataTable = object:Clone()
 
 --[[
-    Function: Datatable.AddKey
+    Function: AddKey
 
     Adds a key to the data table. To help understand this, imagine that you couldn't just do 
     my_table.my_key = some_value in lua, that you had to define my_key first before you were able
@@ -114,7 +115,7 @@ end
     want to use before you use them.
     
     This function must be used directly after you create the table using <CreateDataTable> and
-    before you use functions such as <Datatable.Insert> or <Datatable.Fetch>.
+    before you use functions such as <Insert> or <Fetch>.
 
     Parameters:
 
@@ -153,7 +154,7 @@ end
 
 
 --[[
-    Function: Datatable.AddListOfKeyValues
+    Function: AddListOfKeyValues
 
     Adds a key to the data table, whose value is going to be a table. To help understand this, 
     imagine that you couldn't just do my_table.my_key = {} in lua, that you had to define my_key 
@@ -164,15 +165,15 @@ end
     as each key and value in the table conform to the types given, below.
     
     This function must be used directly after you create the table using <CreateDataTable> and
-    before you use functions such as <Datatable.Insert> or <Datatable.Fetch>.
+    before you use functions such as <Insert> or <Fetch>.
 
     Parameters:
 
         list_name - The *string* of a list name for the table. IE, "allow". This name is what 
             you'll use to refer to the data later.
-        key_type - The *string* of the type for the keys in the list. See <Datatable.AddKey> for
+        key_type - The *string* of the type for the keys in the list. See <AddKey> for
             more information.
-        value_type - The *string* of the type for the values in the list. See <Datatable.AddKey> 
+        value_type - The *string* of the type for the values in the list. See <AddKey> 
             for more information.
         comment - The *optional string* of the comment to use for this key. The comment will show
             up in flatfiles and in MySQL.
@@ -263,7 +264,7 @@ end
 
 
 --[[
-    Function: Datatable.BeginTransaction
+    Function: BeginTransaction
 
     Begins a transaction. Between beginning and ending a transaction, data is basically built up in
     a buffer before getting sent off. This is especially useful for flatfiles since it means that
@@ -293,9 +294,9 @@ end
 
 
 --[[
-    Function: Datatable.EndTransaction
+    Function: EndTransaction
 
-    See <Datatable.BeginTransaction>.
+    See <BeginTransaction>.
 
     Revisions:
 
@@ -317,7 +318,7 @@ end
 
 
 --[[
-    Function: Datatable.ClearCache
+    Function: ClearCache
 
     Clears any cache that may be built up in this datatable. This is a good function to use when
     you know the external data has changed. For flatfiles this forces the file to be re-read.
@@ -335,10 +336,10 @@ function DataTable:ClearCache()
 end
 
 --[[
-    Function: Datatable.DisableCache
+    Function: DisableCache
 
-    First clears the cache with <Datatable.ClearCache> and disables further caching until 
-    re-enabled with <Datatable.EnableCache>. Flatfiles are a bit of a special case in that
+    First clears the cache with <ClearCache> and disables further caching until 
+    re-enabled with <EnableCache>. Flatfiles are a bit of a special case in that
     disabling the cache won't force the file to be re-read every time we need to fetch data.
     
     Revisions:
@@ -352,9 +353,9 @@ end
 
 
 --[[
-    Function: Datatable.EnableCache
+    Function: EnableCache
 
-    See <Datatable.DisableCache>.
+    See <DisableCache>.
 
     Revisions:
 
@@ -434,17 +435,17 @@ end
 
 
 --[[
-    Function: Datatable.UntrackedCopy
+    Function: UntrackedCopy
 
     One of the downsides of using <DataTable> is that data you get out of it (except 
-    <Datatable.GetAll>) can't be thrown throw an iterator like pairs because of the way we track
+    <GetAll>) can't be thrown throw an iterator like pairs because of the way we track
     changes to the table. To help alleviate this problem, you can create an untracked copy of the
     data using this function.
 
     Parameters:
 
         data - The *table* of the data you want to get an untracked copy of. Must directly be the 
-            table you got from <DataTable.Insert> or <DataTable.Fetch>. Don't pass anything else in
+            table you got from <Insert> or <Fetch>. Don't pass anything else in
             here.
 
     Returns:
@@ -466,7 +467,7 @@ end
 
 
 --[[
-    Function: Datatable.ConvertTo
+    Function: ConvertTo
 
     Convert the <DataTable> from using one database type to another. Before converting the data to
     the new database type, it completely wipes whatever information was in the destination database
@@ -592,7 +593,7 @@ end
 
 
 --[[
-    Function: Datatable.Insert
+    Function: Insert
 
     Insert (or replace existing with) a new row.
 
@@ -659,7 +660,7 @@ end
 
 
 --[[
-    Function: Datatable.Fetch
+    Function: Fetch
 
     Fetch a row from the database.
 
@@ -725,7 +726,7 @@ end
 
 
 --[[
-    Function: Datatable.Remove
+    Function: Remove
 
     Delets a row from the database.
 
@@ -775,9 +776,9 @@ end
 
 
 --[[
-    Function: Datatable.GetAll
+    Function: GetAll
 
-    Fetchs all rows from the database. This is similar to <Datatable.Fetch>, except that it fetches
+    Fetchs all rows from the database. This is similar to <Fetch>, except that it fetches
     all rows in the entire database, and all returned data is untracked. This obviously pretty slow
     and should only be used if absolutely necessary.
 
@@ -834,7 +835,7 @@ end
 
 
 --[[
-    Function: Datatable.Empty
+    Function: Empty
 
     Empties all existing data for this database and clears any caches.
 
