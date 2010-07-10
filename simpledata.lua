@@ -171,10 +171,10 @@ end
 
         list_name - The *string* of a list name for the table. IE, "allow". This name is what 
             you'll use to refer to the data later.
-        key_type - The *string* of the type for the keys in the list. See <AddKey> for
-            more information.
-        value_type - The *string* of the type for the values in the list. See <AddKey> 
-            for more information.
+        key_type - The *string* of the type for the keys in the list. See <AddKey> for more 
+            information.
+        value_type - The *string* of the type for the values in the list. See <AddKey> for more 
+            information.
         comment - The *optional string* of the comment to use for this key. The comment will show
             up in flatfiles and in MySQL.
 
@@ -338,9 +338,9 @@ end
 --[[
     Function: DisableCache
 
-    First clears the cache with <ClearCache> and disables further caching until 
-    re-enabled with <EnableCache>. Flatfiles are a bit of a special case in that
-    disabling the cache won't force the file to be re-read every time we need to fetch data.
+    First clears the cache with <ClearCache> and disables further caching until re-enabled with
+    <EnableCache>. Flatfiles are a bit of a special case in that disabling the cache won't force 
+    the file to be re-read every time we need to fetch data.
     
     Revisions:
 
@@ -437,16 +437,15 @@ end
 --[[
     Function: UntrackedCopy
 
-    One of the downsides of using <DataTable> is that data you get out of it (except 
-    <GetAll>) can't be thrown throw an iterator like pairs because of the way we track
-    changes to the table. To help alleviate this problem, you can create an untracked copy of the
-    data using this function.
+    One of the downsides of using <DataTable> is that data you get out of it (except <GetAll>) 
+    can't be thrown throw an iterator like pairs because of the way we track changes to the table. 
+    To help alleviate this problem, you can create an untracked copy of the data using this 
+    function.
 
     Parameters:
 
         data - The *table* of the data you want to get an untracked copy of. Must directly be the 
-            table you got from <Insert> or <Fetch>. Don't pass anything else in
-            here.
+            table you got from <Insert> or <Fetch>. Don't pass anything else in here.
 
     Returns:
 
@@ -778,9 +777,9 @@ end
 --[[
     Function: GetAll
 
-    Fetchs all rows from the database. This is similar to <Fetch>, except that it fetches
-    all rows in the entire database, and all returned data is untracked. This obviously pretty slow
-    and should only be used if absolutely necessary.
+    Fetchs all rows from the database. This is similar to <Fetch>, except that it fetches all rows
+    in the entire database, and all returned data is untracked. This obviously pretty slow and 
+    should only be used if absolutely necessary.
 
     Returns:
 

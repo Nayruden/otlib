@@ -41,8 +41,6 @@ function InitPlugins()
     end
 end
 
---- Group: Individual Plugin API
-
 local Plugin
 
 --[[
@@ -92,7 +90,7 @@ function CreatePlugin( name, description, author )
     return plugin
 end
 
---- Object: Plugin
+--- Object: otlib.Plugin
 Plugin = object:Clone()
 
 
