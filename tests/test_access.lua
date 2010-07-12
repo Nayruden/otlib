@@ -9,7 +9,7 @@ superadmin  = admin:CreateClonedGroup( "superadmin" )
 -- Simple permission
 slap = otlib.access:Register( "slap", admin )
 slap:AddParam( otlib.NumParam():Min( 0 ):Max( 100 ) )
-slap:AddParam( otlib.NumParam():Min( 0 ):Max( 10 ):MinRepeats( 0 ):Default( 1 ) )
+slap:AddParam( otlib.NumParam():Min( 0 ):Max( 10 ):MinRepeats( 0 ):Default( 1 ):RoundTo( 0 ) )
 
 say = otlib.access:Register( "say", admin )
 say:AddParam( otlib.StringParam():TakesRestOfLine( true ) )
@@ -23,7 +23,7 @@ user2 = operator:CreateClonedUser( "321" )
 -- Another user with modified access
 user3 = superadmin:CreateClonedUser( "213" )
 local access = user3:Allow( slap )
-access:ModifyParam( 1 ):Min( -50 ):Max( 50 )
+access:ModifyParam( 1 ):FromString( "-50:50" )
 
 -- Another user with denied access
 user4 = superadmin:CreateClonedUser( "user4" )
@@ -48,6 +48,10 @@ local function runFullSlapTest( user, low, low_level, high, high_level )
     ensureAccess( user, access, { low, 1 }, low )
     ensureAccess( user, access, { low, 1 }, tostring( low ) )
     
+    -- Floating point
+    ensureAccess( user, access, { low + .5, 1 }, low + .5 )
+    ensureAccess( user, access, { low + .5, 1 }, tostring( low + .5 ) )
+    
     local mid = math.ceil( (high + low) / 2 )
     ensureAccess( user, access, { mid, 1 }, mid )
     ensureAccess( user, access, { mid, 1 }, tostring( mid ) )
@@ -55,7 +59,8 @@ local function runFullSlapTest( user, low, low_level, high, high_level )
     ensureAccess( user, access, { high, 1 }, high )
     ensureAccess( user, access, { high, 1 }, tostring( high ) )
     
-    ensureAccess( user, access, { high, 5 }, high, 5 )
+    -- Rounding
+    ensureAccess( user, access, { high, 5 }, high, 5.4 )
 
     -- Missing required arg
     ensureNoAccess( user, access, otlib.InvalidCondition.MissingRequiredParam, otlib.InvalidCondition.DeniedLevel.Parameters, 1 )

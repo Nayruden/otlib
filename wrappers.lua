@@ -33,7 +33,7 @@ module( "wrappers", package.seeall )
         v1.00 - Initial.
 ]]
 function FormatAndEscapeData( data )
-    error( "unimplemented", 2 )
+    error( ErrorMessages.NotImplemented, 2 )
 end
 
 
@@ -62,7 +62,7 @@ end
         v1.00 - Initial.
 ]]
 function Execute( database_type, statement, key_types )
-    error( "unimplemented", 2 )
+    error( ErrorMessages.NotImplemented, 2 )
 end
 
 
@@ -77,7 +77,7 @@ end
         v1.00 - Initial.
 ]]
 function BeginTransaction( database_type )
-    error( "unimplemented", 2 )
+    error( ErrorMessages.NotImplemented, 2 )
 end
 
 
@@ -92,7 +92,7 @@ end
         v1.00 - Initial.
 ]]
 function EndTransaction( database_type )
-    error( "unimplemented", 2 )
+    error( ErrorMessages.NotImplemented, 2 )
 end
 
 
@@ -110,7 +110,7 @@ end
         v1.00 - Initial.
 ]]
 function AffectedRows()
-    error( "unimplemented", 2 )
+    error( ErrorMessages.NotImplemented, 2 )
 end
 
 
@@ -134,7 +134,7 @@ end
         v1.00 - Initial.
 ]]
 function FileExists( file_path )
-    error( "unimplemented", 2 )
+    error( ErrorMessages.NotImplemented, 2 )
 end
 
 
@@ -156,7 +156,7 @@ end
         v1.00 - Initial.
 ]]
 function FileRead( file_path )
-    error( "unimplemented", 2 )
+    error( ErrorMessages.NotImplemented, 2 )
 end
 
 
@@ -175,7 +175,7 @@ end
         v1.00 - Initial.
 ]]
 function FileWrite( file_path, data )
-    error( "unimplemented", 2 )
+    error( ErrorMessages.NotImplemented, 2 )
 end
 
 
@@ -193,24 +193,25 @@ end
         v1.00 - Initial.
 ]]
 function FileDelete( file_path )
-    error( "unimplemented", 2 )
+    error( ErrorMessages.NotImplemented, 2 )
 end
 
 
 --- Group: Command Wrappers
 
+-- TODO
 function AddConsoleCommand( command_name, callback, access, ... )
-    error( "unimplemented", 2 )
+    error( ErrorMessages.NotImplemented, 2 )
 end
 
 function AddSayCommand( command_name, callback, access, ... )
-    error( "unimplemented", 2 )
+    error( ErrorMessages.NotImplemented, 2 )
 end
 
 function RemoveConsoleCommand( command_name )
-    error( "unimplemented", 2 )
+    error( ErrorMessages.NotImplemented, 2 )
 end
 
 function RemoveSayCommand( command_name )
-    error( "unimplemented", 2 )
+    error( ErrorMessages.NotImplemented, 2 )
 end

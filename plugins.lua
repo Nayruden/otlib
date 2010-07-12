@@ -5,8 +5,6 @@ module( "otlib", package.seeall )
 
 local plugins = {}
 
---- Group: Plugin Management
-
 
 --[[
     Function: GetPlugins

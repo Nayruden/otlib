@@ -213,6 +213,7 @@ end
         v1.00 - Initial.
 ]]
 function BaseParam:MinRepeats( min_repeats )
+    CheckArg( 1, "BaseParam:MinRepeats", "number", min_repeats )
     self.min_repeats = min_repeats
     return self
 end
@@ -238,36 +239,175 @@ end
         v1.00 - Initial.
 ]]
 function BaseParam:MaxRepeats( max_repeats )
+    CheckArg( 1, "BaseParam:MaxRepeats", "number", max_repeats )
     self.max_repeats = max_repeats
     return self
 end
 
+
+--[[
+    Function: TakesRestOfLine
+    
+    Set the argument to take the rest of whatever arguments are available. Really only useful for a
+    <otlib.StringParam>, but defined here anyways just in case.
+    
+    A parameter that takes the rest of the line MUST be the last parameter in an access and cannot
+    be a repeating parameter.
+    
+    Parameters:
+    
+        takes_rest_of_line - The *boolean* stating whether or not the argument takes the rest of
+            argument line.
+        
+    Returns:
+    
+        *Self*.
+        
+    Revisions:
+    
+        v1.00 - Initial.
+]]
 function BaseParam:TakesRestOfLine( takes_rest_of_line )
+    CheckArg( 1, "BaseParam:TakesRestOfLine", "boolean", takes_rest_of_line )
     self.takes_rest_of_line = takes_rest_of_line
     return self
 end
 
+
+--[[
+    Function: GetDefault
+    
+    Gets the default for this parameter. See <Default>.
+        
+    Returns:
+    
+        The variable of *any type* that represents the default.
+        
+    Revisions:
+    
+        v1.00 - Initial.
+]]
 function BaseParam:GetDefault()
     return self.default
 end
 
+
+--[[
+    Function: GetMinRepeats
+    
+    Gets the min repeats for this parameter. See <MinRepeats>.
+        
+    Returns:
+    
+        The *number* of minimum repititions for this parameter.
+        
+    Revisions:
+    
+        v1.00 - Initial.
+]]
 function BaseParam:GetMinRepeats()
     return self.min_repeats
 end
 
+
+--[[
+    Function: GetMaxRepeats
+    
+    Gets the max repeats for this parameter. See <MaxRepeats>.
+        
+    Returns:
+    
+        The *number* of maximum repititions for this parameter.
+        
+    Revisions:
+    
+        v1.00 - Initial.
+]]
 function BaseParam:GetMaxRepeats()
     return self.max_repeats
 end
 
+
+--[[
+    Function: GetTakesRestOfLine
+    
+    Gets whether or not this parameter takes the rest of the line. See <TakesRestOfLine>.
+        
+    Returns:
+    
+        The *boolean* stating whether or not this argument takes the rest of the line.
+        
+    Revisions:
+    
+        v1.00 - Initial.
+]]
 function BaseParam:GetTakesRestOfLine()
     return self.takes_rest_of_line
 end
 
+
+--[[
+    Function: ToString
+    
+    Converts any options on this parameter that would be used for user permissions to a string that
+    can be read in again later using <FromString>. IE, you'd use this function to save permissions.
+            
+    Returns:
+    
+        The serialized permission *string*. Implementations return "*" if anything is allowed.
+        
+    Revisions:
+    
+        v1.00 - Initial.
+]]
+function BaseParam:ToString()
+    error( ErrorMessages.NotImplemented, 2 )
+end
+
+
+--[[
+    Function: FromString
+    
+    Loads in user permissions from a string produced by <ToString> for this parameter.
+            
+    Returns:
+    
+        *Self*.
+        
+    Revisions:
+    
+        v1.00 - Initial.
+]]
+function BaseParam:FromString( str )
+    error( ErrorMessages.NotImplemented, 2 )
+end
+
+
+--[[
+    Object: otlib.NumParam
+    
+    The number parameter. Provides a way to read in numbers from the user.
+]]
 NumParam = BaseParam:Clone( true )
 NumParam.min = nil
 NumParam.max = nil
+NumParam.round_to = nil
 NumParam:Default( 0 )
 
+
+--[[
+    Function: Parse
+    
+    See <otlib.BaseParam.Parse>.
+            
+    Returns:
+    
+        The parsed *number*.
+        
+    Revisions:
+    
+        v1.00 - Initial.
+]]
 function NumParam:Parse( user, arg )
     local err
     arg, err = BaseParam.Parse( self, user, arg )
@@ -280,10 +420,25 @@ function NumParam:Parse( user, arg )
         return nil, InvalidCondition.InvalidNumber( tostring( arg ) )
     end
     
+    if self.round_to then
+        parsed_arg = Round( parsed_arg, self.round_to )
+    end
+    
     return parsed_arg
 end
 
+
+--[[
+    Function: IsValid
+    
+    See <otlib.BaseParam.IsValid>.
+        
+    Revisions:
+    
+        v1.00 - Initial.
+]]
 function NumParam:IsValid( user, arg )
+    -- TODO, check user?
     CheckArg( 2, "NumParam:IsValid", "number", arg )
     
     local status, err = BaseParam.IsValid( self, user, arg )
@@ -300,17 +455,145 @@ function NumParam:IsValid( user, arg )
     return true
 end
 
+
+--[[
+    Function: Autocomplete
+    
+    See <otlib.BaseParam.Autocomplete>.
+        
+    Revisions:
+    
+        v1.00 - Initial.
+]]
 function NumParam:Autocomplete( user, cmd, arg )
     error( ErrorMessages.NotImplemented, 2 )
 end
 
+
+--[[
+    Function: Min
+    
+    Sets the minimum number for this argument.
+    
+    Parameters:
+    
+        min - The minimum *number* allowed on this argument.
+        
+    Returns:
+    
+        *Self*.
+        
+    Revisions:
+    
+        v1.00 - Initial.
+]]
 function NumParam:Min( min )
+    CheckArg( 1, "NumParam:Min", "number", min )    
     self.min = min
     return self
 end
 
+
+--[[
+    Function: Max
+    
+    Sets the maximum number for this argument.
+    
+    Parameters:
+    
+        min - The maximum *number* allowed on this argument.
+        
+    Returns:
+    
+        *Self*.
+        
+    Revisions:
+    
+        v1.00 - Initial.
+]]
 function NumParam:Max( max )
+    CheckArg( 1, "NumParam:Max", "number", max )
     self.max = max
+    return self
+end
+
+
+--[[
+    Function: RoundTo
+    
+    Sets what to round this argument too during <Parse>.
+    
+    Parameters:
+    
+        round_to - The *number* of the place to round this number to (see <otlib.Round>) or *nil*.
+            If nil, no rounding is performed, which is the default behavior.
+        
+    Returns:
+    
+        *Self*.
+        
+    Revisions:
+    
+        v1.00 - Initial.
+]]
+function NumParam:RoundTo( round_to )
+    CheckArg( 1, "NumParam:Round", {"nil", "number"}, round_to )
+    self.round_to = round_to
+    return self
+end
+
+
+--[[
+    Function: ToString
+    
+    See <otlib.BaseParam.ToString>.
+    
+    Returns:
+    
+        A *string* in the format "[<min>]:[<max>]" or "*" if there is no min or max.
+        
+    Revisions:
+    
+        v1.00 - Initial.
+]]
+function NumParam:ToString()
+    local str = ""
+    if self.min then
+        str = str .. tostring( self.min )
+    end
+    if self.min or self.max then -- Has either
+        str = str .. ":"
+    else
+        str = "*"
+    end
+    if self.max then
+        str = str .. tostring( self.max )
+    end
+    
+    return str
+end
+
+
+--[[
+    Function: FromString
+    
+    See <otlib.BaseParam.FromString> and <ToString>.
+        
+    Revisions:
+    
+        v1.00 - Initial.
+]]
+function NumParam:FromString( str )
+    CheckArg( 1, "NumParam:FromString", "string", str )
+    
+    local min, max = unpack( Explode( str, ":" ) )
+    if tonumber( min ) then
+        self.min = tonumber( min )
+    end
+    if tonumber( max ) then
+        self.max = tonumber( max )
+    end
+    
     return self
 end
 
